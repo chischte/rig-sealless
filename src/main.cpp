@@ -1,19 +1,16 @@
 /*
  * *****************************************************************************
- * PTY-SEMI-AUTOMATIC-RIG
+ * RIG-SEALLESS
  * *****************************************************************************
- * Program for a semi-automatic endurance test rig for a mechanical tool
+ * Program for a fully-automatic endurance test rig for a mechanical tool
  * -----------------------------------------------------------------------------
  * Michael Wettstein
- * May 2020, Zürich
+ * August 2021, Zürich
  * -----------------------------------------------------------------------------
  * RUNTIME:
- * Measured runtime in idle: about 130 micros
+ * Measured runtime in idle: about xxx micros
  * -----------------------------------------------------------------------------
  * TODO:
- * Stroke completed signal kommt zu früh (nach dem Schneiden), bereits wenndeshalb musste
- * temproär ein delay eingabaut werden!
- * Close front shield earlier
  * *****************************************************************************
  */
 
