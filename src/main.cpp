@@ -64,8 +64,8 @@ String add_suffix_to_eeprom_value(int eeprom_value_number, String suffix);
 enum counter {
   longtime_counter, //
   shorttime_counter, //
-  upper_strap_feed, // [mm]
-  lower_strap_feed, // [mm]
+  upper_strap_feed_old, // [mm]
+  lower_strap_feed_old, // [mm]
   end_of_counter_enum // keep this entry
 };
 int counter_no_of_values = end_of_counter_enum;
@@ -107,7 +107,7 @@ Debounce sensor_sledge_endposition(CONTROLLINO_A1);
 
 Insomnia motor_output_timeout(259200000); // = 3 days// planned to prevent overheating
 Insomnia motor_display_sleep_timeout(259000000); // to inform that brakes will soon release
-Insomnia nex_reset_button_timeout(3000); // pushtime to reset counter
+Insomnia nex_reset_button_timeout(5000); // pushtime to reset counter
 Insomnia print_interval_timeout(1000);
 Insomnia erase_force_value_timeout(5000);
 Insomnia pressure_update_delay;
@@ -176,8 +176,8 @@ bool nex_state_step_mode = true;
 bool nex_state_continuous_mode;
 byte nex_prev_cycle_step;
 byte nex_current_page = 0;
-long nex_upper_strap_feed;
-long nex_lower_strap_feed;
+long nex_upper_strap_feed_old;
+long nex_lower_strap_feed_old;
 long nex_shorttime_counter;
 long nex_longtime_counter;
 
@@ -538,10 +538,10 @@ void button_schlitten_pop(void *ptr) { //
 
 // TOUCH EVENT FUNCTIONS PAGE 2 - LEFT SIDE ------------------------------------
 
-void button_upper_slider_left_push(void *ptr) { decrease_slider_value(upper_strap_feed); }
-void button_upper_slider_right_push(void *ptr) { increase_slider_value(upper_strap_feed); }
-void button_lower_slider_left_push(void *ptr) { decrease_slider_value(lower_strap_feed); }
-void button_lower_slider_right_push(void *ptr) { increase_slider_value(lower_strap_feed); }
+void button_upper_slider_left_push(void *ptr) { decrease_slider_value(upper_strap_feed_old); }
+void button_upper_slider_right_push(void *ptr) { increase_slider_value(upper_strap_feed_old); }
+void button_lower_slider_left_push(void *ptr) { decrease_slider_value(lower_strap_feed_old); }
+void button_lower_slider_right_push(void *ptr) { increase_slider_value(lower_strap_feed_old); }
 void increase_slider_value(int eeprom_value_number) {
   long max_value = 350; // [mm]
   long interval = 5;
@@ -607,10 +607,10 @@ void page_2_push(void *ptr) {
   update_field_values_page_2();
 }
 void update_field_values_page_2() {
-  nex_upper_strap_feed = counter.get_value(nex_upper_strap_feed) - 1;
-  nex_lower_strap_feed = counter.get_value(nex_lower_strap_feed) - 1;
-  nex_shorttime_counter = counter.get_value(nex_upper_strap_feed) - 1;
-  nex_longtime_counter = counter.get_value(nex_upper_strap_feed) - 1;
+  nex_upper_strap_feed_old = counter.get_value(nex_upper_strap_feed_old) - 1;
+  nex_lower_strap_feed_old = counter.get_value(nex_lower_strap_feed_old) - 1;
+  nex_shorttime_counter = counter.get_value(nex_upper_strap_feed_old) - 1;
+  nex_longtime_counter = counter.get_value(nex_upper_strap_feed_old) - 1;
   //nex_state_continuous_mode = true;
 }
 
@@ -813,15 +813,15 @@ void display_loop_page_2_left_side() {
 }
 
 void update_upper_slider_value() {
-  if (counter.get_value(upper_strap_feed) != nex_upper_strap_feed) {
-    display_text_in_field(add_suffix_to_eeprom_value(upper_strap_feed, "mm"), "t4");
-    nex_upper_strap_feed = counter.get_value(upper_strap_feed);
+  if (counter.get_value(upper_strap_feed_old) != nex_upper_strap_feed_old) {
+    display_text_in_field(add_suffix_to_eeprom_value(upper_strap_feed_old, "mm"), "t4");
+    nex_upper_strap_feed_old = counter.get_value(upper_strap_feed_old);
   }
 }
 void update_lower_slider_value() {
-  if (counter.get_value(lower_strap_feed) != nex_lower_strap_feed) {
-    display_text_in_field(add_suffix_to_eeprom_value(lower_strap_feed, "mm"), "t2");
-    nex_lower_strap_feed = counter.get_value(lower_strap_feed);
+  if (counter.get_value(lower_strap_feed_old) != nex_lower_strap_feed_old) {
+    display_text_in_field(add_suffix_to_eeprom_value(lower_strap_feed_old, "mm"), "t2");
+    nex_lower_strap_feed_old = counter.get_value(lower_strap_feed_old);
   }
 }
 String add_suffix_to_eeprom_value(int eeprom_value_number, String suffix) {
@@ -983,13 +983,13 @@ class Feed_straps : public Cycle_step {
   }
   void do_loop_stuff() {
 
-    unsigned long upper_feedtime = calculate_feedtime_from_mm(counter.get_value(upper_strap_feed));
+    unsigned long upper_feedtime = calculate_feedtime_from_mm(counter.get_value(upper_strap_feed_old));
     if (upper_feed_delay.delay_time_is_up(upper_feedtime)) {
       stop_upper_motor();
       upper_strap_completed = true;
     }
 
-    unsigned long lower_feedtime = calculate_feedtime_from_mm(counter.get_value(lower_strap_feed));
+    unsigned long lower_feedtime = calculate_feedtime_from_mm(counter.get_value(lower_strap_feed_old));
     if (lower_feed_delay.delay_time_is_up(lower_feedtime)) {
       stop_lower_motor();
       lower_strap_completed = true;
