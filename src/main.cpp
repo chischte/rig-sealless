@@ -27,7 +27,6 @@
 #include <alias_colino.h> //        aliases when using an Arduino instead of a Controllino
 #include <cycle_step.h> //          blueprint of a cycle step
 #include <state_controller.h> //    keeps track of machine states
-#include <traffic_light.h> //       keeps track of user infos, manages text and colors
 
 // DECLARE FUNCTIONS IF NEEDED FOR THE COMPILER: *******************************
 
@@ -41,9 +40,6 @@ void display_loop_page_1_right_side();
 void display_loop_page_2_left_side();
 void display_loop_page_2_right_side();
 void display_text_in_info_field(String text);
-void update_traffic_light_field();
-void set_traffic_light_field_text(String text);
-void set_traffic_light_field_color(String color);
 void update_cycle_name();
 void update_upper_slider_value();
 void update_lower_slider_value();
@@ -78,7 +74,6 @@ const byte PRESSURE_SENSOR_PIN = CONTROLLINO_A2;
 
 EEPROM_Counter counter;
 State_controller state_controller;
-Traffic_light traffic_light;
 
 Cylinder cylinder_sledge_inlet(CONTROLLINO_D14);
 Cylinder cylinder_sledge_vent(CONTROLLINO_D13);
@@ -109,7 +104,7 @@ NexPage nex_page_1 = NexPage(1, 0, "page1");
 NexButton button_previous_step = NexButton(1, 6, "b1");
 NexButton button_next_step = NexButton(1, 7, "b2");
 NexButton button_reset_cycle = NexButton(1, 5, "b0");
-NexButton button_traffic_light = NexButton(1, 15, "b8");
+NexDSButton switch_play_pause = NexDSButton(1, 3, "bt0");
 NexDSButton switch_step_auto_mode = NexDSButton(1, 4, "bt1");
 // PAGE 1 - RIGHT SIDE ---------------------------------------------------------
 NexButton button_spanntaste = NexButton(1, 9, "b4");
@@ -135,8 +130,8 @@ NexTouch *nex_listen_list[] = { //
     // PAGE 0:
     &nex_page_0,
     // PAGE 1 LEFT:
-    &nex_page_1, &button_previous_step, &button_next_step, &button_reset_cycle,
-    &button_traffic_light, &switch_step_auto_mode,
+    &nex_page_1, &button_previous_step, &button_next_step, &button_reset_cycle, &switch_play_pause,
+    &switch_step_auto_mode,
     // PAGE 1 RIGHT:
     &button_cut, &switch_wippenhebel, &switch_air_release, &button_sledge, &button_spanntaste,
     &button_crimptaste,
@@ -188,7 +183,7 @@ void set_initial_cylinder_states() {
 
 void reset_flag_of_current_step() {
 
-    main_cycle_steps[state_controller.get_current_step()]->reset_flags();
+  main_cycle_steps[state_controller.get_current_step()]->reset_flags();
 }
 
 void stop_machine() {
@@ -211,24 +206,6 @@ void reset_machine() {
 unsigned long calculate_feedtime_from_mm(long mm) {
   unsigned long feedtime = mm * 17;
   return feedtime;
-}
-
-void manage_traffic_lights() {
-
-  // SHOW START SCREEN:
-  if (!traffic_light.is_in_start_state() && !state_controller.machine_is_running()) {
-    traffic_light.set_info_start();
-  }
-
-  // GO TO SLEEP:
-  if (traffic_light.is_in_user_do_stuff_state() ) {
-    traffic_light.set_info_sleep();
-  }
-  // WAKE UP:
-  if (traffic_light.is_in_sleep_state()) {
-    traffic_light.set_info_user_do_stuff();
-  }
-
 }
 
 long measure_runtime() {
@@ -393,14 +370,9 @@ void set_momentary_button_high_or_low(String button, bool state) {
 
 // TOUCH EVENT FUNCTIONS PAGE 1 - LEFT SIDE ------------------------------------
 
-void button_traffic_light_push(void *ptr) {
-
-  if (traffic_light.is_in_start_state()) {
-    state_controller.set_machine_running();
-    nex_state_machine_running = !nex_state_machine_running;
-  }
-  if (traffic_light.is_in_sleep_state()) {
-  }
+void switch_play_pause_push(void *ptr) {
+  state_controller.toggle_machine_running_state();
+  nex_state_machine_running = !nex_state_machine_running;
 }
 
 void switch_step_auto_mode_push(void *ptr) {
@@ -452,12 +424,8 @@ void switch_air_release_push(void *ptr) {
   cylinder_sledge_vent.toggle();
   nex_state_air_release = !nex_state_air_release;
 }
-void button_schneiden_push(void *ptr) {
-  cylinder_blade.set(1);
-}
-void button_schneiden_pop(void *ptr) {
-  cylinder_blade.set(0);
-}
+void button_schneiden_push(void *ptr) { cylinder_blade.set(1); }
+void button_schneiden_pop(void *ptr) { cylinder_blade.set(0); }
 void button_schlitten_push(void *ptr) { //
   cylinder_sledge_inlet.set(1);
 }
@@ -529,7 +497,6 @@ void page_1_push(void *ptr) {
   nex_state_blade = 0;
   nex_state_crimptaste = 0;
   nex_state_machine_running = 0;
-  traffic_light.set_info_has_changed();
 }
 void page_2_push(void *ptr) {
   nex_current_page = 2;
@@ -555,7 +522,7 @@ void attach_push_and_pop() {
   button_reset_cycle.attachPush(button_reset_cycle_push);
   button_previous_step.attachPush(button_stepback_push);
   button_next_step.attachPush(button_next_step_push);
-  button_traffic_light.attachPush(button_traffic_light_push);
+  switch_play_pause.attachPush(switch_play_pause_push);
   switch_step_auto_mode.attachPush(switch_step_auto_mode_push);
   switch_wippenhebel.attachPush(switch_wippenhebel_push);
   switch_air_release.attachPush(switch_air_release_push);
@@ -592,9 +559,7 @@ void nextion_display_setup() {
   send_to_nextion();
   sendCommand("page 0");
   send_to_nextion();
-
   attach_push_and_pop();
-  traffic_light.set_info_start();
 
   delay(4000);
   sendCommand("page 1"); // switch display to page x
@@ -623,7 +588,6 @@ void nextion_display_loop() {
 void display_loop_page_1_left_side() {
 
   update_cycle_name();
-  update_traffic_light_field();
 
   // UPDATE SWITCHSTATE "STEP"/"AUTO"-MODE:
   if (nex_state_step_mode != state_controller.is_in_step_mode()) {
@@ -674,27 +638,15 @@ String get_continuous_cycle_display_string() {
   return display_text_cycle_name;
 }
 
-void update_traffic_light_field() {
-  if (traffic_light.info_has_changed()) {
-    String color = traffic_light.get_info_color();
-    set_traffic_light_field_color(color);
-    String text = traffic_light.get_info_text();
-    set_traffic_light_field_text(text);
-  }
-}
-
-void set_traffic_light_field_text(String text) { display_text_in_field(text, "b8"); }
-
-void set_traffic_light_field_color(String color) {
-  Serial2.print("b8.bco=" + color);
-  send_to_nextion();
-}
-
 // DISPLAY LOOP PAGE 1 RIGHT SIDE: ---------------------------------------------
 
 void display_loop_page_1_right_side() {
 
   // UPDATE SWITCHES:
+  if (state_controller.machine_is_running() != nex_state_machine_running) {
+    toggle_ds_switch("bt3");
+    nex_state_machine_running = !nex_state_machine_running;
+  }
   if (cylinder_sledge_vent.get_state() != nex_state_air_release) {
     toggle_ds_switch("bt3");
     nex_state_air_release = !nex_state_air_release;
@@ -805,7 +757,6 @@ class User_do_stuff : public Cycle_step {
 
   void do_initial_stuff() {
     block_sledge();
-    traffic_light.set_info_user_do_stuff();
     substep = 0;
     show_info_field();
     display_text_in_info_field("ZUGKRAFT");
@@ -829,7 +780,6 @@ class Release_air : public Cycle_step {
   String get_display_text() { return "LUFT ABLASSEN"; }
 
   void do_initial_stuff() {
-    traffic_light.set_info_machine_do_stuff();
     vent_sledge();
     cycle_step_delay.set_unstarted();
   }
@@ -846,7 +796,6 @@ class Release_brake : public Cycle_step {
   void do_initial_stuff() {
     vent_sledge();
     hide_info_field();
-    traffic_light.set_info_machine_do_stuff();
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
@@ -860,7 +809,6 @@ class Sledge_back : public Cycle_step {
   String get_display_text() { return "ZURUECKFAHREN"; }
 
   void do_initial_stuff() {
-    traffic_light.set_info_machine_do_stuff();
     move_sledge();
     cycle_step_delay.set_unstarted();
   }
@@ -876,7 +824,6 @@ class Cut_strap : public Cycle_step {
   String get_display_text() { return "SCHNEIDEN"; }
 
   void do_initial_stuff() {
-    traffic_light.set_info_machine_do_stuff();
     vent_sledge();
   }
   void do_loop_stuff() {
@@ -893,14 +840,12 @@ class Feed_straps : public Cycle_step {
   bool lower_strap_completed = false;
 
   void do_initial_stuff() {
-    traffic_light.set_info_machine_do_stuff();
     upper_strap_completed = false;
     lower_strap_completed = false;
     cycle_step_delay.set_unstarted();
     block_sledge();
   }
-  void do_loop_stuff() {
-  }
+  void do_loop_stuff() {}
 };
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -912,7 +857,6 @@ class Continuous_vent : public Cycle_step {
   String get_display_text() { return "ENTLUEFTEN"; }
 
   void do_initial_stuff() {
-    traffic_light.set_info_user_do_stuff();
     vent_sledge();
     cycle_step_delay.set_unstarted();
   }
@@ -928,7 +872,6 @@ class Continuous_sledge_back : public Cycle_step {
   bool has_reached_startpoint = false;
 
   void do_initial_stuff() {
-    traffic_light.set_info_user_do_stuff();
     move_sledge();
     has_reached_startpoint = false;
     cycle_step_delay.set_unstarted();
@@ -954,7 +897,6 @@ class Continuous_release_pulses : public Cycle_step {
 
   void do_initial_stuff() {
     block_sledge();
-    traffic_light.set_info_user_do_stuff();
     substep = 1;
     show_info_field();
     display_text_in_info_field("ZUGKRAFT");
@@ -1085,9 +1027,6 @@ void loop() {
   if (state_controller.reset_mode_is_active()) {
     reset_machine();
   }
-
-  // MANAGE TRAFFIC LIGHTS:
-  manage_traffic_lights();
 
   // DISPLAY DEBUG INFOMATION:
   unsigned long runtime = measure_runtime();
