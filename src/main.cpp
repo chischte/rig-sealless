@@ -59,7 +59,7 @@ String get_main_cycle_display_string();
 String get_continuous_cycle_display_string();
 String add_suffix_to_eeprom_value(int eeprom_value_number, String suffix);
 
-// DEFINE NAMES FOR THE CYCLE COUNTER ******************************************
+// DEFINE COUNTER ENUM ******************************************
 
 enum counter {
   longtime_counter, //
@@ -70,16 +70,7 @@ enum counter {
 };
 int counter_no_of_values = end_of_counter_enum;
 
-// DECLARE VARIABLES, PINS AND OBJECTS FOR THE STEPPER MOTORS ******************
-const byte micro_step_factor = 2;
-const long full_steps_per_mm = 80; // calculated from measurements
-const byte stepper_direction_factor = 1; // set -1 to change direction
-
-const byte UPPER_MOTOR_STEP_PIN = CONTROLLINO_D0;
-const byte UPPER_MOTOR_DIRECTION_PIN = CONTROLLINO_D1;
-
-const byte LOWER_MOTOR_STEP_PIN = CONTROLLINO_D3;
-const byte LOWER_MOTOR_DIRECTION_PIN = CONTROLLINO_D4;
+// DECLARE PINS ******************
 
 const byte PRESSURE_SENSOR_PIN = CONTROLLINO_A2;
 
@@ -92,9 +83,11 @@ Traffic_light traffic_light;
 Cylinder cylinder_sledge_inlet(CONTROLLINO_D14);
 Cylinder cylinder_sledge_vent(CONTROLLINO_D13);
 Cylinder cylinder_blade(CONTROLLINO_D12);
-Cylinder cylinder_frontclap(CONTROLLINO_D15);
-Cylinder motor_upper_enable(CONTROLLINO_D2);
-Cylinder motor_lower_enable(CONTROLLINO_D5);
+Cylinder cylinder_nachklemme(CONTROLLINO_D15);
+Cylinder cylinder_wippenhbel(CONTROLLINO_D2);
+Cylinder cylinder_mover_clamp(CONTROLLINO_D5);
+Cylinder cylinder_mover_motor(CONTROLLINO_D0);
+Cylinder cylinder_vorklemme(CONTROLLINO_D5);
 Cylinder cylinder_spanntaste(CONTROLLINO_D8);
 Cylinder cylinder_crimptaste(CONTROLLINO_D9);
 Cylinder green_light_lamp(CONTROLLINO_D11);
@@ -102,8 +95,6 @@ Cylinder red_light_lamp(CONTROLLINO_D10);
 
 Debounce sensor_sledge_startposition(CONTROLLINO_A0);
 Debounce sensor_sledge_endposition(CONTROLLINO_A1);
-// Debounce sensor_upper_strap(CONTROLLINO_A2);
-// Debounce sensor_lower_strap(CONTROLLINO_A3);
 
 Insomnia motor_output_timeout(259200000); // = 3 days// planned to prevent overheating
 Insomnia motor_display_sleep_timeout(259000000); // to inform that brakes will soon release
@@ -131,7 +122,7 @@ NexButton button_spanntaste = NexButton(1, 9, "b4");
 NexButton button_crimptaste = NexButton(1, 8, "b3");
 NexButton button_cut = NexButton(1, 14, "b5");
 NexButton button_sledge = NexButton(1, 1, "b6");
-NexDSButton switch_motor_brake = NexDSButton(1, 10, "bt5");
+NexDSButton switch_wippenhebel = NexDSButton(1, 10, "bt5");
 NexDSButton switch_air_release = NexDSButton(1, 13, "bt3");
 // PAGE 2 - LEFT SIDE ----------------------------------------------------------
 NexPage nex_page_2 = NexPage(2, 0, "page2");
@@ -153,7 +144,7 @@ NexTouch *nex_listen_list[] = { //
     &nex_page_1, &button_previous_step, &button_next_step, &button_reset_cycle,
     &button_traffic_light, &switch_step_auto_mode,
     // PAGE 1 RIGHT:
-    &button_cut, &switch_motor_brake, &switch_air_release, &button_sledge, &button_spanntaste,
+    &button_cut, &switch_wippenhebel, &switch_air_release, &button_sledge, &button_spanntaste,
     &button_crimptaste,
     // PAGE 2 LEFT:
     &nex_page_2, &button_slider_1_left, &button_slider_1_right, &nex_page_2, &button_slider_2_left,
@@ -168,7 +159,7 @@ NexTouch *nex_listen_list[] = { //
 bool nex_state_air_release;
 bool nex_state_spanntaste;
 bool nex_state_crimptaste;
-bool nex_state_motor_brake;
+bool nex_state_wippenhebel;
 bool nex_state_sledge;
 bool nex_state_blade;
 bool nex_state_machine_running;
@@ -191,12 +182,13 @@ std::vector<Cycle_step *> continuous_cycle_steps;
 
 void set_initial_cylinder_states() {
   cylinder_blade.set(0);
-  cylinder_frontclap.set(0);
+  cylinder_nachklemme.set(0);
   cylinder_sledge_inlet.set(0);
   cylinder_sledge_vent.set(0);
-  motor_upper_enable.set(0);
+  cylinder_wippenhbel.set(0);
   cylinder_spanntaste.set(0);
-  motor_lower_enable.set(0);
+  cylinder_mover_clamp.set(0);
+  cylinder_vorklemme.set(0);
   cylinder_crimptaste.set(0);
 }
 
@@ -228,19 +220,18 @@ void reset_machine() {
 }
 
 void motor_output_enable() {
-  motor_upper_enable.set(1);
-  motor_lower_enable.set(1);
+  cylinder_wippenhbel.set(1);
   motor_output_timeout.reset_time();
   motor_display_sleep_timeout.reset_time();
 }
 
 void motor_output_disable() {
-  motor_upper_enable.set(0);
-  motor_lower_enable.set(0);
+  cylinder_wippenhbel.set(0);
+  cylinder_mover_clamp.set(0);
 }
 
 void motor_output_toggle() {
-  if (motor_upper_enable.get_state()) {
+  if (cylinder_wippenhbel.get_state()) {
     motor_output_disable();
   } else {
     motor_output_enable();
@@ -253,20 +244,6 @@ void monitor_motor_output() {
   }
 }
 
-void start_upper_motor() {
-  motor_output_enable();
-  cylinder_spanntaste.set(1);
-}
-
-void stop_upper_motor() { cylinder_spanntaste.set(0); }
-
-void start_lower_motor() {
-  motor_output_enable();
-  cylinder_crimptaste.set(1);
-}
-
-void stop_lower_motor() { cylinder_crimptaste.set(0); }
-
 unsigned long calculate_feedtime_from_mm(long mm) {
   unsigned long feedtime = mm * 17;
   return feedtime;
@@ -274,7 +251,7 @@ unsigned long calculate_feedtime_from_mm(long mm) {
 
 void manage_signal_lights() {
   green_light_lamp.set(traffic_light.is_in_user_do_stuff_state());
-  if (!motor_upper_enable.get_state()) {
+  if (!cylinder_wippenhbel.get_state()) {
     green_light_lamp.set(0);
   }
   red_light_lamp.set(!green_light_lamp.get_state());
@@ -501,21 +478,21 @@ void button_reset_cycle_push(void *ptr) {
 
 // TOUCH EVENT FUNCTIONS PAGE 1 - RIGHT SIDE -----------------------------------
 
-void switch_motor_brake_push(void *ptr) {
+void switch_wippenhebel_push(void *ptr) {
   motor_output_toggle();
-  nex_state_motor_brake = !nex_state_motor_brake;
+  nex_state_wippenhebel = !nex_state_wippenhebel;
 }
 void button_spanntaste_push(void *ptr) { //
-  start_upper_motor();
+  cylinder_spanntaste.set(1);
 }
 void button_spanntaste_pop(void *ptr) { //
-  stop_upper_motor();
+  cylinder_spanntaste.set(0);
 }
 void button_crimptaste_push(void *ptr) { //
-  start_lower_motor();
+  cylinder_crimptaste.set(1);
 }
 void button_crimptaste_pop(void *ptr) { //
-  stop_lower_motor();
+  cylinder_crimptaste.set(0);
 }
 void switch_air_release_push(void *ptr) {
   cylinder_sledge_vent.toggle();
@@ -523,11 +500,9 @@ void switch_air_release_push(void *ptr) {
 }
 void button_schneiden_push(void *ptr) {
   cylinder_blade.set(1);
-  cylinder_frontclap.set(1);
 }
 void button_schneiden_pop(void *ptr) {
   cylinder_blade.set(0);
-  cylinder_frontclap.set(0);
 }
 void button_schlitten_push(void *ptr) { //
   cylinder_sledge_inlet.set(1);
@@ -594,7 +569,7 @@ void page_1_push(void *ptr) {
   nex_prev_cycle_step = !state_controller.get_current_step();
   nex_state_step_mode = true;
   nex_state_air_release = 1;
-  nex_state_motor_brake = 0;
+  nex_state_wippenhebel = 0;
   nex_state_spanntaste = 0;
   nex_state_sledge = 0;
   nex_state_blade = 0;
@@ -628,7 +603,7 @@ void attach_push_and_pop() {
   button_next_step.attachPush(button_next_step_push);
   button_traffic_light.attachPush(button_traffic_light_push);
   switch_step_auto_mode.attachPush(switch_step_auto_mode_push);
-  switch_motor_brake.attachPush(switch_motor_brake_push);
+  switch_wippenhebel.attachPush(switch_wippenhebel_push);
   switch_air_release.attachPush(switch_air_release_push);
   // PAGE 1 PUSH AND POP:
   button_spanntaste.attachPush(button_spanntaste_push);
@@ -770,9 +745,9 @@ void display_loop_page_1_right_side() {
     toggle_ds_switch("bt3");
     nex_state_air_release = !nex_state_air_release;
   }
-  if (motor_upper_enable.get_state() != nex_state_motor_brake) {
+  if (cylinder_wippenhbel.get_state() != nex_state_wippenhebel) {
     toggle_ds_switch("bt5");
-    nex_state_motor_brake = !nex_state_motor_brake;
+    nex_state_wippenhebel = !nex_state_wippenhebel;
   }
 
   // UPDATE BUTTONS:
@@ -954,12 +929,10 @@ class Cut_strap : public Cycle_step {
     traffic_light.set_info_machine_do_stuff();
     motor_output_disable();
     vent_sledge();
-    cylinder_frontclap.set(1);
   }
   void do_loop_stuff() {
     cylinder_blade.stroke(1300, 1000);
     if (cylinder_blade.stroke_completed()) {
-      cylinder_frontclap.set(0);
       set_loop_completed();
     }
   }
@@ -978,20 +951,16 @@ class Feed_straps : public Cycle_step {
     lower_feed_delay.set_unstarted();
     cycle_step_delay.set_unstarted();
     block_sledge();
-    start_upper_motor();
-    start_lower_motor();
   }
   void do_loop_stuff() {
 
     unsigned long upper_feedtime = calculate_feedtime_from_mm(counter.get_value(upper_strap_feed_old));
     if (upper_feed_delay.delay_time_is_up(upper_feedtime)) {
-      stop_upper_motor();
       upper_strap_completed = true;
     }
 
     unsigned long lower_feedtime = calculate_feedtime_from_mm(counter.get_value(lower_strap_feed_old));
     if (lower_feed_delay.delay_time_is_up(lower_feedtime)) {
-      stop_lower_motor();
       lower_strap_completed = true;
     }
 
@@ -1086,21 +1055,9 @@ class Continuous_release_pulses : public Cycle_step {
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
-// STEPPER MOTOR SETUP *********************************************************
-
-void setup_stepper_motors() {
-
-  // PINS:
-  pinMode(UPPER_MOTOR_DIRECTION_PIN, OUTPUT);
-  pinMode(LOWER_MOTOR_DIRECTION_PIN, OUTPUT);
-  digitalWrite(UPPER_MOTOR_DIRECTION_PIN, HIGH);
-  digitalWrite(LOWER_MOTOR_DIRECTION_PIN, HIGH);
-}
-
 // MAIN SETUP ******************************************************************
 
 void setup() {
-  setup_stepper_motors();
   set_initial_cylinder_states();
   //------------------------------------------------
   // SETUP PIN MODES:
