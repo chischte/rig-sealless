@@ -96,7 +96,7 @@ Cylinder cylinder_frontclap(CONTROLLINO_D15);
 Cylinder motor_upper_enable(CONTROLLINO_D2);
 Cylinder motor_lower_enable(CONTROLLINO_D5);
 Cylinder cylinder_spanntaste(CONTROLLINO_D8);
-Cylinder motor_lower_pulse(CONTROLLINO_D9);
+Cylinder cylinder_crimptaste(CONTROLLINO_D9);
 Cylinder green_light_lamp(CONTROLLINO_D11);
 Cylinder red_light_lamp(CONTROLLINO_D10);
 
@@ -128,7 +128,7 @@ NexButton button_traffic_light = NexButton(1, 15, "b8");
 NexDSButton switch_step_auto_mode = NexDSButton(1, 4, "bt1");
 // PAGE 1 - RIGHT SIDE ---------------------------------------------------------
 NexButton button_spanntaste = NexButton(1, 9, "b4");
-NexButton button_lower_motor = NexButton(1, 8, "b3");
+NexButton button_crimptaste = NexButton(1, 8, "b3");
 NexButton button_cut = NexButton(1, 14, "b5");
 NexButton button_sledge = NexButton(1, 1, "b6");
 NexDSButton switch_motor_brake = NexDSButton(1, 10, "bt5");
@@ -154,7 +154,7 @@ NexTouch *nex_listen_list[] = { //
     &button_traffic_light, &switch_step_auto_mode,
     // PAGE 1 RIGHT:
     &button_cut, &switch_motor_brake, &switch_air_release, &button_sledge, &button_spanntaste,
-    &button_lower_motor,
+    &button_crimptaste,
     // PAGE 2 LEFT:
     &nex_page_2, &button_slider_1_left, &button_slider_1_right, &nex_page_2, &button_slider_2_left,
     &button_slider_2_right, &switch_continuous_mode,
@@ -167,7 +167,7 @@ NexTouch *nex_listen_list[] = { //
 
 bool nex_state_air_release;
 bool nex_state_spanntaste;
-bool nex_state_lower_motor;
+bool nex_state_crimptaste;
 bool nex_state_motor_brake;
 bool nex_state_sledge;
 bool nex_state_blade;
@@ -197,7 +197,7 @@ void set_initial_cylinder_states() {
   motor_upper_enable.set(0);
   cylinder_spanntaste.set(0);
   motor_lower_enable.set(0);
-  motor_lower_pulse.set(0);
+  cylinder_crimptaste.set(0);
 }
 
 void reset_flag_of_current_step() {
@@ -262,10 +262,10 @@ void stop_upper_motor() { cylinder_spanntaste.set(0); }
 
 void start_lower_motor() {
   motor_output_enable();
-  motor_lower_pulse.set(1);
+  cylinder_crimptaste.set(1);
 }
 
-void stop_lower_motor() { motor_lower_pulse.set(0); }
+void stop_lower_motor() { cylinder_crimptaste.set(0); }
 
 unsigned long calculate_feedtime_from_mm(long mm) {
   unsigned long feedtime = mm * 17;
@@ -511,10 +511,10 @@ void button_spanntaste_push(void *ptr) { //
 void button_spanntaste_pop(void *ptr) { //
   stop_upper_motor();
 }
-void button_motor_unten_push(void *ptr) { //
+void button_crimptaste_push(void *ptr) { //
   start_lower_motor();
 }
-void button_motor_unten_pop(void *ptr) { //
+void button_crimptaste_pop(void *ptr) { //
   stop_lower_motor();
 }
 void switch_air_release_push(void *ptr) {
@@ -598,7 +598,7 @@ void page_1_push(void *ptr) {
   nex_state_spanntaste = 0;
   nex_state_sledge = 0;
   nex_state_blade = 0;
-  nex_state_lower_motor = 0;
+  nex_state_crimptaste = 0;
   nex_state_machine_running = 0;
   traffic_light.set_info_has_changed();
 }
@@ -633,8 +633,8 @@ void attach_push_and_pop() {
   // PAGE 1 PUSH AND POP:
   button_spanntaste.attachPush(button_spanntaste_push);
   button_spanntaste.attachPop(button_spanntaste_pop);
-  button_lower_motor.attachPush(button_motor_unten_push);
-  button_lower_motor.attachPop(button_motor_unten_pop);
+  button_crimptaste.attachPush(button_crimptaste_push);
+  button_crimptaste.attachPop(button_crimptaste_pop);
   button_cut.attachPush(button_schneiden_push);
   button_cut.attachPop(button_schneiden_pop);
   button_sledge.attachPush(button_schlitten_push);
@@ -794,11 +794,11 @@ void display_loop_page_1_right_side() {
     set_momentary_button_high_or_low(button, state);
     nex_state_blade = cylinder_blade.get_state();
   }
-  if (motor_lower_pulse.get_state() != nex_state_lower_motor) {
-    bool state = motor_lower_pulse.get_state();
+  if (cylinder_crimptaste.get_state() != nex_state_crimptaste) {
+    bool state = cylinder_crimptaste.get_state();
     String button = "b3";
     set_momentary_button_high_or_low(button, state);
-    nex_state_lower_motor = motor_lower_pulse.get_state();
+    nex_state_crimptaste = cylinder_crimptaste.get_state();
   }
 }
 
