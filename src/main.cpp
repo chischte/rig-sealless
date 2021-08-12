@@ -95,7 +95,7 @@ Cylinder cylinder_blade(CONTROLLINO_D12);
 Cylinder cylinder_frontclap(CONTROLLINO_D15);
 Cylinder motor_upper_enable(CONTROLLINO_D2);
 Cylinder motor_lower_enable(CONTROLLINO_D5);
-Cylinder motor_upper_pulse(CONTROLLINO_D8);
+Cylinder cylinder_spanntaste(CONTROLLINO_D8);
 Cylinder motor_lower_pulse(CONTROLLINO_D9);
 Cylinder green_light_lamp(CONTROLLINO_D11);
 Cylinder red_light_lamp(CONTROLLINO_D10);
@@ -127,7 +127,7 @@ NexButton button_reset_cycle = NexButton(1, 5, "b0");
 NexButton button_traffic_light = NexButton(1, 15, "b8");
 NexDSButton switch_step_auto_mode = NexDSButton(1, 4, "bt1");
 // PAGE 1 - RIGHT SIDE ---------------------------------------------------------
-NexButton button_upper_motor = NexButton(1, 9, "b4");
+NexButton button_spanntaste = NexButton(1, 9, "b4");
 NexButton button_lower_motor = NexButton(1, 8, "b3");
 NexButton button_cut = NexButton(1, 14, "b5");
 NexButton button_sledge = NexButton(1, 1, "b6");
@@ -153,7 +153,7 @@ NexTouch *nex_listen_list[] = { //
     &nex_page_1, &button_previous_step, &button_next_step, &button_reset_cycle,
     &button_traffic_light, &switch_step_auto_mode,
     // PAGE 1 RIGHT:
-    &button_cut, &switch_motor_brake, &switch_air_release, &button_sledge, &button_upper_motor,
+    &button_cut, &switch_motor_brake, &switch_air_release, &button_sledge, &button_spanntaste,
     &button_lower_motor,
     // PAGE 2 LEFT:
     &nex_page_2, &button_slider_1_left, &button_slider_1_right, &nex_page_2, &button_slider_2_left,
@@ -166,7 +166,7 @@ NexTouch *nex_listen_list[] = { //
 // VARIABLES TO MONITOR NEXTION DISPLAY STATES *********************************
 
 bool nex_state_air_release;
-bool nex_state_upper_motor;
+bool nex_state_spanntaste;
 bool nex_state_lower_motor;
 bool nex_state_motor_brake;
 bool nex_state_sledge;
@@ -195,7 +195,7 @@ void set_initial_cylinder_states() {
   cylinder_sledge_inlet.set(0);
   cylinder_sledge_vent.set(0);
   motor_upper_enable.set(0);
-  motor_upper_pulse.set(0);
+  cylinder_spanntaste.set(0);
   motor_lower_enable.set(0);
   motor_lower_pulse.set(0);
 }
@@ -255,10 +255,10 @@ void monitor_motor_output() {
 
 void start_upper_motor() {
   motor_output_enable();
-  motor_upper_pulse.set(1);
+  cylinder_spanntaste.set(1);
 }
 
-void stop_upper_motor() { motor_upper_pulse.set(0); }
+void stop_upper_motor() { cylinder_spanntaste.set(0); }
 
 void start_lower_motor() {
   motor_output_enable();
@@ -505,10 +505,10 @@ void switch_motor_brake_push(void *ptr) {
   motor_output_toggle();
   nex_state_motor_brake = !nex_state_motor_brake;
 }
-void button_motor_oben_push(void *ptr) { //
+void button_spanntaste_push(void *ptr) { //
   start_upper_motor();
 }
-void button_motor_oben_pop(void *ptr) { //
+void button_spanntaste_pop(void *ptr) { //
   stop_upper_motor();
 }
 void button_motor_unten_push(void *ptr) { //
@@ -595,7 +595,7 @@ void page_1_push(void *ptr) {
   nex_state_step_mode = true;
   nex_state_air_release = 1;
   nex_state_motor_brake = 0;
-  nex_state_upper_motor = 0;
+  nex_state_spanntaste = 0;
   nex_state_sledge = 0;
   nex_state_blade = 0;
   nex_state_lower_motor = 0;
@@ -631,8 +631,8 @@ void attach_push_and_pop() {
   switch_motor_brake.attachPush(switch_motor_brake_push);
   switch_air_release.attachPush(switch_air_release_push);
   // PAGE 1 PUSH AND POP:
-  button_upper_motor.attachPush(button_motor_oben_push);
-  button_upper_motor.attachPop(button_motor_oben_pop);
+  button_spanntaste.attachPush(button_spanntaste_push);
+  button_spanntaste.attachPop(button_spanntaste_pop);
   button_lower_motor.attachPush(button_motor_unten_push);
   button_lower_motor.attachPop(button_motor_unten_pop);
   button_cut.attachPush(button_schneiden_push);
@@ -782,11 +782,11 @@ void display_loop_page_1_right_side() {
     set_momentary_button_high_or_low(button, state);
     nex_state_sledge = cylinder_sledge_inlet.get_state();
   }
-  if (motor_upper_pulse.get_state() != nex_state_upper_motor) {
-    bool state = motor_upper_pulse.get_state();
+  if (cylinder_spanntaste.get_state() != nex_state_spanntaste) {
+    bool state = cylinder_spanntaste.get_state();
     String button = "b4";
     set_momentary_button_high_or_low(button, state);
-    nex_state_upper_motor = motor_upper_pulse.get_state();
+    nex_state_spanntaste = cylinder_spanntaste.get_state();
   }
   if (cylinder_blade.get_state() != nex_state_blade) {
     bool state = cylinder_blade.get_state();
