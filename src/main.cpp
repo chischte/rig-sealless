@@ -82,29 +82,23 @@ Traffic_light traffic_light;
 
 Cylinder cylinder_sledge_inlet(CONTROLLINO_D14);
 Cylinder cylinder_sledge_vent(CONTROLLINO_D13);
-Cylinder cylinder_blade(CONTROLLINO_D12);
-Cylinder cylinder_nachklemme(CONTROLLINO_D15);
-Cylinder cylinder_wippenhbel(CONTROLLINO_D2);
-Cylinder cylinder_mover_clamp(CONTROLLINO_D5);
-Cylinder cylinder_mover_motor(CONTROLLINO_D0);
 Cylinder cylinder_vorklemme(CONTROLLINO_D5);
 Cylinder cylinder_spanntaste(CONTROLLINO_D8);
 Cylinder cylinder_crimptaste(CONTROLLINO_D9);
-Cylinder green_light_lamp(CONTROLLINO_D11);
-Cylinder red_light_lamp(CONTROLLINO_D10);
+Cylinder cylinder_wippenhebel(CONTROLLINO_D2);
+Cylinder cylinder_nachklemme(CONTROLLINO_D15);
+Cylinder cylinder_mover_clamp(CONTROLLINO_D5);
+Cylinder cylinder_mover_motor(CONTROLLINO_D0);
+Cylinder cylinder_blade(CONTROLLINO_D12);
 
 Debounce sensor_sledge_startposition(CONTROLLINO_A0);
 Debounce sensor_sledge_endposition(CONTROLLINO_A1);
 
-Insomnia motor_output_timeout(259200000); // = 3 days// planned to prevent overheating
-Insomnia motor_display_sleep_timeout(259000000); // to inform that brakes will soon release
 Insomnia nex_reset_button_timeout(5000); // pushtime to reset counter
 Insomnia print_interval_timeout(1000);
 Insomnia erase_force_value_timeout(5000);
 Insomnia pressure_update_delay;
 Insomnia cycle_step_delay;
-Insomnia upper_feed_delay;
-Insomnia lower_feed_delay;
 
 // NEXTION DISPLAY OBJECTS *****************************************************
 
@@ -185,7 +179,7 @@ void set_initial_cylinder_states() {
   cylinder_nachklemme.set(0);
   cylinder_sledge_inlet.set(0);
   cylinder_sledge_vent.set(0);
-  cylinder_wippenhbel.set(0);
+  cylinder_wippenhebel.set(0);
   cylinder_spanntaste.set(0);
   cylinder_mover_clamp.set(0);
   cylinder_vorklemme.set(0);
@@ -194,12 +188,7 @@ void set_initial_cylinder_states() {
 
 void reset_flag_of_current_step() {
 
-  if (state_controller.is_in_auto_mode() || state_controller.is_in_step_mode()) {
     main_cycle_steps[state_controller.get_current_step()]->reset_flags();
-  }
-  if (state_controller.is_in_continuous_mode()) {
-    continuous_cycle_steps[state_controller.get_current_step()]->reset_flags();
-  }
 }
 
 void stop_machine() {
@@ -219,42 +208,9 @@ void reset_machine() {
   state_controller.set_reset_mode(false);
 }
 
-void motor_output_enable() {
-  cylinder_wippenhbel.set(1);
-  motor_output_timeout.reset_time();
-  motor_display_sleep_timeout.reset_time();
-}
-
-void motor_output_disable() {
-  cylinder_wippenhbel.set(0);
-  cylinder_mover_clamp.set(0);
-}
-
-void motor_output_toggle() {
-  if (cylinder_wippenhbel.get_state()) {
-    motor_output_disable();
-  } else {
-    motor_output_enable();
-  }
-}
-
-void monitor_motor_output() {
-  if (motor_output_timeout.has_timed_out()) {
-    motor_output_disable();
-  }
-}
-
 unsigned long calculate_feedtime_from_mm(long mm) {
   unsigned long feedtime = mm * 17;
   return feedtime;
-}
-
-void manage_signal_lights() {
-  green_light_lamp.set(traffic_light.is_in_user_do_stuff_state());
-  if (!cylinder_wippenhbel.get_state()) {
-    green_light_lamp.set(0);
-  }
-  red_light_lamp.set(!green_light_lamp.get_state());
 }
 
 void manage_traffic_lights() {
@@ -265,15 +221,14 @@ void manage_traffic_lights() {
   }
 
   // GO TO SLEEP:
-  if (traffic_light.is_in_user_do_stuff_state() && motor_display_sleep_timeout.has_timed_out()) {
+  if (traffic_light.is_in_user_do_stuff_state() ) {
     traffic_light.set_info_sleep();
   }
   // WAKE UP:
-  if (traffic_light.is_in_sleep_state() && !motor_display_sleep_timeout.has_timed_out()) {
+  if (traffic_light.is_in_sleep_state()) {
     traffic_light.set_info_user_do_stuff();
   }
 
-  manage_signal_lights();
 }
 
 long measure_runtime() {
@@ -445,7 +400,6 @@ void button_traffic_light_push(void *ptr) {
     nex_state_machine_running = !nex_state_machine_running;
   }
   if (traffic_light.is_in_sleep_state()) {
-    motor_output_enable(); // wakes the tool up
   }
 }
 
@@ -479,7 +433,7 @@ void button_reset_cycle_push(void *ptr) {
 // TOUCH EVENT FUNCTIONS PAGE 1 - RIGHT SIDE -----------------------------------
 
 void switch_wippenhebel_push(void *ptr) {
-  motor_output_toggle();
+  cylinder_wippenhebel.toggle();
   nex_state_wippenhebel = !nex_state_wippenhebel;
 }
 void button_spanntaste_push(void *ptr) { //
@@ -745,7 +699,7 @@ void display_loop_page_1_right_side() {
     toggle_ds_switch("bt3");
     nex_state_air_release = !nex_state_air_release;
   }
-  if (cylinder_wippenhbel.get_state() != nex_state_wippenhebel) {
+  if (cylinder_wippenhebel.get_state() != nex_state_wippenhebel) {
     toggle_ds_switch("bt5");
     nex_state_wippenhebel = !nex_state_wippenhebel;
   }
@@ -851,7 +805,6 @@ class User_do_stuff : public Cycle_step {
 
   void do_initial_stuff() {
     block_sledge();
-    motor_output_enable();
     traffic_light.set_info_user_do_stuff();
     substep = 0;
     show_info_field();
@@ -877,7 +830,6 @@ class Release_air : public Cycle_step {
 
   void do_initial_stuff() {
     traffic_light.set_info_machine_do_stuff();
-    motor_output_enable();
     vent_sledge();
     cycle_step_delay.set_unstarted();
   }
@@ -895,7 +847,6 @@ class Release_brake : public Cycle_step {
     vent_sledge();
     hide_info_field();
     traffic_light.set_info_machine_do_stuff();
-    motor_output_disable();
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
@@ -910,7 +861,6 @@ class Sledge_back : public Cycle_step {
 
   void do_initial_stuff() {
     traffic_light.set_info_machine_do_stuff();
-    motor_output_disable();
     move_sledge();
     cycle_step_delay.set_unstarted();
   }
@@ -927,7 +877,6 @@ class Cut_strap : public Cycle_step {
 
   void do_initial_stuff() {
     traffic_light.set_info_machine_do_stuff();
-    motor_output_disable();
     vent_sledge();
   }
   void do_loop_stuff() {
@@ -947,29 +896,10 @@ class Feed_straps : public Cycle_step {
     traffic_light.set_info_machine_do_stuff();
     upper_strap_completed = false;
     lower_strap_completed = false;
-    upper_feed_delay.set_unstarted();
-    lower_feed_delay.set_unstarted();
     cycle_step_delay.set_unstarted();
     block_sledge();
   }
   void do_loop_stuff() {
-
-    unsigned long upper_feedtime = calculate_feedtime_from_mm(counter.get_value(upper_strap_feed_old));
-    if (upper_feed_delay.delay_time_is_up(upper_feedtime)) {
-      upper_strap_completed = true;
-    }
-
-    unsigned long lower_feedtime = calculate_feedtime_from_mm(counter.get_value(lower_strap_feed_old));
-    if (lower_feed_delay.delay_time_is_up(lower_feedtime)) {
-      lower_strap_completed = true;
-    }
-
-    if (upper_strap_completed && lower_strap_completed) {
-      if (cycle_step_delay.delay_time_is_up(500)) {
-        motor_output_disable();
-        set_loop_completed();
-      }
-    }
   }
 };
 //------------------------------------------------------------------------------
@@ -999,7 +929,6 @@ class Continuous_sledge_back : public Cycle_step {
 
   void do_initial_stuff() {
     traffic_light.set_info_user_do_stuff();
-    motor_output_disable();
     move_sledge();
     has_reached_startpoint = false;
     cycle_step_delay.set_unstarted();
@@ -1013,7 +942,6 @@ class Continuous_sledge_back : public Cycle_step {
     if (has_reached_startpoint) {
       if (cycle_step_delay.delay_time_is_up(4000)) {
         block_sledge();
-        motor_output_enable();
         set_loop_completed();
       }
     }
@@ -1026,7 +954,6 @@ class Continuous_release_pulses : public Cycle_step {
 
   void do_initial_stuff() {
     block_sledge();
-    motor_output_enable();
     traffic_light.set_info_user_do_stuff();
     substep = 1;
     show_info_field();
@@ -1143,9 +1070,6 @@ void loop() {
 
   // UPDATE DISPLAY:
   nextion_display_loop();
-
-  // MONITOR MOTOR BRAKE TO PREVENT FROM OVERHEATING:
-  monitor_motor_output();
 
   // RUN STEP OR AUTO MODE:
   if (state_controller.is_in_step_mode() || state_controller.is_in_auto_mode()) {
