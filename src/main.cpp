@@ -59,20 +59,18 @@ String add_suffix_to_eeprom_value(int eeprom_value_number, String suffix);
 enum counter {
   longtime_counter, //
   shorttime_counter, //
-  upper_strap_feed_old, // [mm]
-  lower_strap_feed_old, // [mm]
+  empty_slider_1, //
+  empty_slider_2, //
   end_of_counter_enum // keep this entry
 };
 int counter_no_of_values = end_of_counter_enum;
 
-// DECLARE PINS ******************
-
-const byte PRESSURE_SENSOR_PIN = CONTROLLINO_A2;
-
-// GENERATE OBJECTS ************************************************************
+// DEFINE PINS / GENERATE OBJECTS ************************************************************
 
 EEPROM_Counter counter;
 State_controller state_controller;
+
+const byte PRESSURE_SENSOR_PIN = CONTROLLINO_A2;
 
 Cylinder cylinder_schlittenzuluft(CONTROLLINO_D14);
 Cylinder cylinder_schlittenabluft(CONTROLLINO_D13);
@@ -108,10 +106,10 @@ NexDSButton switch_step_auto_mode = NexDSButton(1, 4, "bt1");
 // PAGE 1 - RIGHT SIDE ---------------------------------------------------------
 NexButton button_spanntaste = NexButton(1, 9, "b4");
 NexButton button_crimptaste = NexButton(1, 8, "b3");
-NexButton button_cut = NexButton(1, 14, "b5");
-NexButton button_sledge = NexButton(1, 1, "b6");
+NexButton button_schneiden = NexButton(1, 14, "b5");
+NexButton button_schlitten = NexButton(1, 1, "b6");
 NexDSButton switch_wippenhebel = NexDSButton(1, 10, "bt5");
-NexDSButton switch_air_release = NexDSButton(1, 13, "bt3");
+NexDSButton switch_entlueften = NexDSButton(1, 13, "bt3");
 // PAGE 2 - LEFT SIDE ----------------------------------------------------------
 NexPage nex_page_2 = NexPage(2, 0, "page2");
 NexButton button_slider_1_left = NexButton(2, 5, "b1");
@@ -132,7 +130,7 @@ NexTouch *nex_listen_list[] = { //
     &nex_page_1, &button_previous_step, &button_next_step, &button_reset_cycle, &switch_play_pause,
     &switch_step_auto_mode,
     // PAGE 1 RIGHT:
-    &button_cut, &switch_wippenhebel, &switch_air_release, &button_sledge, &button_spanntaste,
+    &button_schneiden, &switch_wippenhebel, &switch_entlueften, &button_schlitten, &button_spanntaste,
     &button_crimptaste,
     // PAGE 2 LEFT:
     &nex_page_2, &button_slider_1_left, &button_slider_1_right, &nex_page_2, &button_slider_2_left,
@@ -144,19 +142,19 @@ NexTouch *nex_listen_list[] = { //
 
 // VARIABLES TO MONITOR NEXTION DISPLAY STATES *********************************
 
-bool nex_state_air_release;
+bool nex_state_schlittenabluft;
 bool nex_state_spanntaste;
 bool nex_state_crimptaste;
 bool nex_state_wippenhebel;
-bool nex_state_sledge;
-bool nex_state_blade;
+bool nex_state_schlittenzuluft;
+bool nex_state_messer;
 bool nex_state_machine_running;
 bool nex_state_step_mode = true;
 bool nex_state_continuous_mode;
 byte nex_prev_cycle_step;
 byte nex_current_page = 0;
-long nex_upper_strap_feed_old;
-long nex_lower_strap_feed_old;
+long nex_empty_slider_1;
+long nex_empty_slider_2;
 long nex_shorttime_counter;
 long nex_longtime_counter;
 
@@ -418,9 +416,9 @@ void button_crimptaste_push(void *ptr) { //
 void button_crimptaste_pop(void *ptr) { //
   cylinder_crimptaste.set(0);
 }
-void switch_air_release_push(void *ptr) {
+void switch_entlueften_push(void *ptr) {
   cylinder_schlittenabluft.toggle();
-  nex_state_air_release = !nex_state_air_release;
+  nex_state_schlittenabluft = !nex_state_schlittenabluft;
 }
 void button_schneiden_push(void *ptr) { cylinder_messer.set(1); }
 void button_schneiden_pop(void *ptr) { cylinder_messer.set(0); }
@@ -433,10 +431,10 @@ void button_schlitten_pop(void *ptr) { //
 
 // TOUCH EVENT FUNCTIONS PAGE 2 - LEFT SIDE ------------------------------------
 
-void button_upper_slider_left_push(void *ptr) { decrease_slider_value(upper_strap_feed_old); }
-void button_upper_slider_right_push(void *ptr) { increase_slider_value(upper_strap_feed_old); }
-void button_lower_slider_left_push(void *ptr) { decrease_slider_value(lower_strap_feed_old); }
-void button_lower_slider_right_push(void *ptr) { increase_slider_value(lower_strap_feed_old); }
+void button_upper_slider_left_push(void *ptr) { decrease_slider_value(empty_slider_1); }
+void button_upper_slider_right_push(void *ptr) { increase_slider_value(empty_slider_1); }
+void button_lower_slider_left_push(void *ptr) { decrease_slider_value(empty_slider_2); }
+void button_lower_slider_right_push(void *ptr) { increase_slider_value(empty_slider_2); }
 void increase_slider_value(int eeprom_value_number) {
   long max_value = 350; // [mm]
   long interval = 5;
@@ -488,11 +486,11 @@ void page_1_push(void *ptr) {
   // REFRESH BUTTON STATES:
   nex_prev_cycle_step = !state_controller.get_current_step();
   nex_state_step_mode = true;
-  nex_state_air_release = 1;
+  nex_state_schlittenabluft = 1;
   nex_state_wippenhebel = 0;
   nex_state_spanntaste = 0;
-  nex_state_sledge = 0;
-  nex_state_blade = 0;
+  nex_state_schlittenzuluft = 0;
+  nex_state_messer = 0;
   nex_state_crimptaste = 0;
   nex_state_machine_running = 0;
 }
@@ -501,10 +499,10 @@ void page_2_push(void *ptr) {
   update_field_values_page_2();
 }
 void update_field_values_page_2() {
-  nex_upper_strap_feed_old = counter.get_value(nex_upper_strap_feed_old) - 1;
-  nex_lower_strap_feed_old = counter.get_value(nex_lower_strap_feed_old) - 1;
-  nex_shorttime_counter = counter.get_value(nex_upper_strap_feed_old) - 1;
-  nex_longtime_counter = counter.get_value(nex_upper_strap_feed_old) - 1;
+  nex_empty_slider_1 = counter.get_value(nex_empty_slider_1) - 1;
+  nex_empty_slider_2 = counter.get_value(nex_empty_slider_2) - 1;
+  nex_shorttime_counter = counter.get_value(nex_empty_slider_1) - 1;
+  nex_longtime_counter = counter.get_value(nex_empty_slider_1) - 1;
   //nex_state_continuous_mode = true;
 }
 
@@ -523,16 +521,16 @@ void attach_push_and_pop() {
   switch_play_pause.attachPush(switch_play_pause_push);
   switch_step_auto_mode.attachPush(switch_step_auto_mode_push);
   switch_wippenhebel.attachPush(switch_wippenhebel_push);
-  switch_air_release.attachPush(switch_air_release_push);
+  switch_entlueften.attachPush(switch_entlueften_push);
   // PAGE 1 PUSH AND POP:
   button_spanntaste.attachPush(button_spanntaste_push);
   button_spanntaste.attachPop(button_spanntaste_pop);
   button_crimptaste.attachPush(button_crimptaste_push);
   button_crimptaste.attachPop(button_crimptaste_pop);
-  button_cut.attachPush(button_schneiden_push);
-  button_cut.attachPop(button_schneiden_pop);
-  button_sledge.attachPush(button_schlitten_push);
-  button_sledge.attachPop(button_schlitten_pop);
+  button_schneiden.attachPush(button_schneiden_push);
+  button_schneiden.attachPop(button_schneiden_pop);
+  button_schlitten.attachPush(button_schlitten_push);
+  button_schlitten.attachPop(button_schlitten_pop);
   // PAGE 2 PUSH ONLY:
   nex_page_2.attachPush(page_2_push);
   button_slider_1_left.attachPush(button_upper_slider_left_push);
@@ -625,9 +623,9 @@ void display_loop_page_1_right_side() {
     toggle_ds_switch("bt3");
     nex_state_machine_running = !nex_state_machine_running;
   }
-  if (cylinder_schlittenabluft.get_state() != nex_state_air_release) {
+  if (cylinder_schlittenabluft.get_state() != nex_state_schlittenabluft) {
     toggle_ds_switch("bt3");
-    nex_state_air_release = !nex_state_air_release;
+    nex_state_schlittenabluft = !nex_state_schlittenabluft;
   }
   if (cylinder_wippenhebel.get_state() != nex_state_wippenhebel) {
     toggle_ds_switch("bt5");
@@ -635,11 +633,11 @@ void display_loop_page_1_right_side() {
   }
 
   // UPDATE BUTTONS:
-  if (cylinder_schlittenzuluft.get_state() != nex_state_sledge) {
+  if (cylinder_schlittenzuluft.get_state() != nex_state_schlittenzuluft) {
     bool state = cylinder_schlittenzuluft.get_state();
     String button = "b6";
     set_momentary_button_high_or_low(button, state);
-    nex_state_sledge = cylinder_schlittenzuluft.get_state();
+    nex_state_schlittenzuluft = cylinder_schlittenzuluft.get_state();
   }
   if (cylinder_spanntaste.get_state() != nex_state_spanntaste) {
     bool state = cylinder_spanntaste.get_state();
@@ -647,11 +645,11 @@ void display_loop_page_1_right_side() {
     set_momentary_button_high_or_low(button, state);
     nex_state_spanntaste = cylinder_spanntaste.get_state();
   }
-  if (cylinder_messer.get_state() != nex_state_blade) {
+  if (cylinder_messer.get_state() != nex_state_messer) {
     bool state = cylinder_messer.get_state();
     String button = "b5";
     set_momentary_button_high_or_low(button, state);
-    nex_state_blade = cylinder_messer.get_state();
+    nex_state_messer = cylinder_messer.get_state();
   }
   if (cylinder_crimptaste.get_state() != nex_state_crimptaste) {
     bool state = cylinder_crimptaste.get_state();
@@ -672,15 +670,15 @@ void display_loop_page_2_left_side() {
 }
 
 void update_upper_slider_value() {
-  if (counter.get_value(upper_strap_feed_old) != nex_upper_strap_feed_old) {
-    display_text_in_field(add_suffix_to_eeprom_value(upper_strap_feed_old, "mm"), "t4");
-    nex_upper_strap_feed_old = counter.get_value(upper_strap_feed_old);
+  if (counter.get_value(empty_slider_1) != nex_empty_slider_1) {
+    display_text_in_field(add_suffix_to_eeprom_value(empty_slider_1, "mm"), "t4");
+    nex_empty_slider_1 = counter.get_value(empty_slider_1);
   }
 }
 void update_lower_slider_value() {
-  if (counter.get_value(lower_strap_feed_old) != nex_lower_strap_feed_old) {
-    display_text_in_field(add_suffix_to_eeprom_value(lower_strap_feed_old, "mm"), "t2");
-    nex_lower_strap_feed_old = counter.get_value(lower_strap_feed_old);
+  if (counter.get_value(empty_slider_2) != nex_empty_slider_2) {
+    display_text_in_field(add_suffix_to_eeprom_value(empty_slider_2, "mm"), "t2");
+    nex_empty_slider_2 = counter.get_value(empty_slider_2);
   }
 }
 String add_suffix_to_eeprom_value(int eeprom_value_number, String suffix) {
