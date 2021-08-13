@@ -777,8 +777,9 @@ class Schlitten_zurueck : public Cycle_step {
   void do_loop_stuff() {
     // if (sensor_sledge_startposition.switched_high()) {
     //   vent_sledge();
-    // }
     set_loop_completed();
+    // }
+    vent_sledge();
     set_loop_completed();
   }
 };
