@@ -70,21 +70,24 @@ int counter_no_of_values = end_of_counter_enum;
 EEPROM_Counter counter;
 State_controller state_controller;
 
-const byte PRESSURE_SENSOR_PIN = CONTROLLINO_A2;
-
-Cylinder cylinder_schlittenzuluft(CONTROLLINO_D14);
-Cylinder cylinder_schlittenabluft(CONTROLLINO_D13);
-Cylinder cylinder_vorklemme(CONTROLLINO_D5);
-Cylinder cylinder_spanntaste(CONTROLLINO_D8);
-Cylinder cylinder_crimptaste(CONTROLLINO_D9);
-Cylinder cylinder_wippenhebel(CONTROLLINO_D2);
-Cylinder cylinder_nachklemme(CONTROLLINO_D15);
-Cylinder cylinder_vorschubklemme(CONTROLLINO_D5);
-Cylinder cylinder_vorschubzylinder(CONTROLLINO_D0);
-Cylinder cylinder_messer(CONTROLLINO_D12);
-
+// INPUT PINS:
 Debounce sensor_sledge_startposition(CONTROLLINO_A0);
 Debounce sensor_sledge_endposition(CONTROLLINO_A1);
+const byte PRESSURE_SENSOR_PIN = CONTROLLINO_A2;
+
+// OUTPUT PINS:
+const byte FOERDERZYLINDER_AUS = CONTROLLINO_D0;
+const byte FOERDERZYLINDER_EIN = CONTROLLINO_D1;
+Cylinder cylinder_schlittenzuluft(CONTROLLINO_D2);
+Cylinder cylinder_schlittenabluft(CONTROLLINO_D3);
+Cylinder cylinder_auswerfer(CONTROLLINO_D4);
+Cylinder cylinder_vorklemme(CONTROLLINO_D5);
+Cylinder cylinder_spanntaste(CONTROLLINO_D6);
+Cylinder cylinder_crimptaste(CONTROLLINO_D7);
+Cylinder cylinder_wippenhebel(CONTROLLINO_D8);
+Cylinder cylinder_nachklemme(CONTROLLINO_D9);
+Cylinder cylinder_vorschubklemme(CONTROLLINO_D10);
+Cylinder cylinder_messer(CONTROLLINO_D11);
 
 Insomnia nex_reset_button_timeout(10000); // pushtime to reset counter
 Insomnia print_interval_timeout(1000);
@@ -130,8 +133,8 @@ NexTouch *nex_listen_list[] = { //
     &nex_page_1, &button_previous_step, &button_next_step, &button_reset_cycle, &switch_play_pause,
     &switch_step_auto_mode,
     // PAGE 1 RIGHT:
-    &button_schneiden, &switch_wippenhebel, &switch_entlueften, &button_schlitten, &button_spanntaste,
-    &button_crimptaste,
+    &button_schneiden, &switch_wippenhebel, &switch_entlueften, &button_schlitten,
+    &button_spanntaste, &button_crimptaste,
     // PAGE 2 LEFT:
     &nex_page_2, &button_slider_1_left, &button_slider_1_right, &nex_page_2, &button_slider_2_left,
     &button_slider_2_right, &switch_continuous_mode,
@@ -219,6 +222,16 @@ void move_sledge() {
 void block_sledge() {
   cylinder_schlittenzuluft.set(0);
   cylinder_schlittenabluft.set(1);
+}
+
+void foerderzylinder_ausfahren() {
+  digitalWrite(FOERDERZYLINDER_AUS, HIGH);
+  digitalWrite(FOERDERZYLINDER_EIN, LOW);
+}
+
+void foerderzylinder_zurueckfahren() {
+  digitalWrite(FOERDERZYLINDER_AUS, LOW);
+  digitalWrite(FOERDERZYLINDER_EIN, HIGH);
 }
 
 void vent_sledge() {
@@ -726,33 +739,8 @@ void reset_lower_counter_value() {
 // CLASSES FOR THE MAIN CYCLE STEPS ********************************************
 // STEP-MODE AND AUTO MODE
 
-//------------------------------------------------------------------------------
-class User_do_stuff : public Cycle_step {
-  String get_display_text() { return "SPANNEN + CRIMPEN"; }
-  int substep = 0;
-
-  void do_initial_stuff() {
-    block_sledge();
-    substep = 0;
-    show_info_field();
-    display_text_in_info_field("ZUGKRAFT");
-    cycle_step_delay.set_unstarted();
-  }
-  void do_loop_stuff() {
-    if (sensor_sledge_endposition.switched_high()) {
-      substep = 1;
-    }
-    if (substep == 1) {
-      if (cycle_step_delay.delay_time_is_up(3700)) {
-        counter.count_one_up(shorttime_counter);
-        counter.count_one_up(longtime_counter);
-        set_loop_completed();
-      }
-    }
-  }
-};
-//------------------------------------------------------------------------------
-class Release_air : public Cycle_step {
+// SCHLITTEN ENTLÜFTEN
+class Luft_ablassen : public Cycle_step {
   String get_display_text() { return "LUFT ABLASSEN"; }
 
   void do_initial_stuff() {
@@ -765,13 +753,101 @@ class Release_air : public Cycle_step {
     }
   }
 };
-//------------------------------------------------------------------------------
-class Release_brake : public Cycle_step {
-  String get_display_text() { return "BREMSE LOESEN"; }
+
+// VORKLEMME ÖFFNEN
+class Vorklemme_auf : public Cycle_step {
+  String get_display_text() { return "VORKLEMME AUF"; }
 
   void do_initial_stuff() {
-    vent_sledge();
-    hide_info_field();
+    cylinder_vorklemme.set(0);
+    cycle_step_delay.set_unstarted();
+  }
+  void do_loop_stuff() {
+    if (cycle_step_delay.delay_time_is_up(2000)) {
+      set_loop_completed();
+    }
+  }
+};
+
+// SCHLITTEN ZURÜCKFAHREN
+class Schlitten_zurueck : public Cycle_step {
+  String get_display_text() { return "SCHLITTEN ZURÜCK"; }
+
+  void do_initial_stuff() {
+    move_sledge();
+  }
+  void do_loop_stuff() {
+    if (sensor_sledge_startposition.switched_high()) {
+      vent_sledge();
+      set_loop_completed();
+    }
+  }
+};
+
+// NACHKLEMME ÖFFNEN
+class Nachklemme_auf : public Cycle_step {
+  String get_display_text() { return "NACHKLEMME AUF"; }
+
+  void do_initial_stuff() {
+    cylinder_nachklemme.set(0);
+    cycle_step_delay.set_unstarted();
+  }
+  void do_loop_stuff() {
+    if (cycle_step_delay.delay_time_is_up(2000)) {
+      set_loop_completed();
+    }
+  }
+};
+
+// AUSWERFER BETÄTIGEN
+class Auswerfen : public Cycle_step {
+  String get_display_text() { return "AUSWERFEN"; }
+
+  void do_initial_stuff() {}
+  void do_loop_stuff() {
+    cylinder_auswerfer.stroke(1500, 100);
+    if (cylinder_auswerfer.stroke_completed()) {
+      set_loop_completed();
+    }
+  }
+};
+
+// FÖRDERKLEMME SCHLIESSEN
+class Foerderklemme_zu : public Cycle_step {
+  String get_display_text() { return "FÖRDERKLEMME ZU"; }
+
+  void do_initial_stuff() {
+    cylinder_vorschubklemme.set(1);
+    cycle_step_delay.set_unstarted();
+  }
+  void do_loop_stuff() {
+    if (cycle_step_delay.delay_time_is_up(500)) {
+      set_loop_completed();
+    }
+  }
+};
+
+// FÖRDERN
+class Foerdern : public Cycle_step {
+  String get_display_text() { return "FÖRDERN"; }
+
+  void do_initial_stuff() {
+    foerderzylinder_ausfahren();
+    cycle_step_delay.set_unstarted();
+  }
+  void do_loop_stuff() {
+    if (cycle_step_delay.delay_time_is_up(2000)) {
+      set_loop_completed();
+    }
+  }
+};
+
+// VORKLEMME SCHLIESSEN
+class Vorklemme_zu : public Cycle_step {
+  String get_display_text() { return "VORKLEMME ZU"; }
+
+  void do_initial_stuff() {
+    cylinder_vorklemme.set(1);
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
@@ -780,23 +856,9 @@ class Release_brake : public Cycle_step {
     }
   }
 };
-//------------------------------------------------------------------------------
-class Sledge_back : public Cycle_step {
-  String get_display_text() { return "ZURUECKFAHREN"; }
 
-  void do_initial_stuff() {
-    move_sledge();
-    cycle_step_delay.set_unstarted();
-  }
-  void do_loop_stuff() {
-    if (cycle_step_delay.delay_time_is_up(1800)) {
-      vent_sledge();
-      set_loop_completed();
-    }
-  }
-};
-//------------------------------------------------------------------------------
-class Cut_strap : public Cycle_step {
+// SCHNEIDEN
+class Schneiden : public Cycle_step {
   String get_display_text() { return "SCHNEIDEN"; }
 
   void do_initial_stuff() { vent_sledge(); }
@@ -807,20 +869,90 @@ class Cut_strap : public Cycle_step {
     }
   }
 };
-//------------------------------------------------------------------------------
-class Feed_straps : public Cycle_step {
-  String get_display_text() { return "BAND VORSCHIEBEN"; }
-  bool upper_strap_completed = false;
-  bool lower_strap_completed = false;
+
+// FÖRDERKLEMME ÖFFNEN
+class Foerdereinheit_auf : public Cycle_step {
+  String get_display_text() { return "FÖRDERKLEMME AUF"; }
 
   void do_initial_stuff() {
-    upper_strap_completed = false;
-    lower_strap_completed = false;
+    cylinder_vorschubklemme.set(0);
     cycle_step_delay.set_unstarted();
-    block_sledge();
   }
-  void do_loop_stuff() {}
+  void do_loop_stuff() {
+    if (cycle_step_delay.delay_time_is_up(500)) {
+      set_loop_completed();
+    }
+  }
 };
+
+// FÖRDERZYLINDER ZURÜCK
+class Foerderzylinder_zurueck : public Cycle_step {
+  String get_display_text() { return "FÖRDERER ZURÜCK"; }
+
+  void do_initial_stuff() { foerderzylinder_zurueckfahren(); }
+  void do_loop_stuff() { set_loop_completed(); }
+};
+
+// GERÄT SPANNEN
+class Tool_spannen : public Cycle_step {
+  String get_display_text() { return "TOOL SPANNEN"; }
+
+  void do_initial_stuff() {
+    block_sledge();
+    cylinder_spanntaste.set(1);
+    cycle_step_delay.set_unstarted();
+  }
+  void do_loop_stuff() {
+    if (cycle_step_delay.delay_time_is_up(4000)) {
+      cylinder_spanntaste.set(0);
+      set_loop_completed();
+    }
+  }
+};
+
+// NACHKLEMME SCHLIESSEN
+class Nachklemme_zu : public Cycle_step {
+  String get_display_text() { return "NACHKLEMME ZU"; }
+
+  void do_initial_stuff() {
+    cylinder_nachklemme.set(1);
+    cycle_step_delay.set_unstarted();
+  }
+  void do_loop_stuff() {
+    if (cycle_step_delay.delay_time_is_up(1000)) {
+      set_loop_completed();
+    }
+  }
+};
+
+// GERÄT CRIMPEN
+class Tool_crimp : public Cycle_step {
+  String get_display_text() { return "TOOL CRIMP"; }
+
+  void do_initial_stuff() {
+  }
+  void do_loop_stuff() {
+    cylinder_crimptaste.stroke(500,1500);
+    if (cylinder_crimptaste.stroke_completed()) {
+      set_loop_completed();
+    }
+  }
+};
+
+// WIPPENHEBEL BETÄTIGEN UND LÖSEN
+class Tool_wippenhebel : public Cycle_step {
+  String get_display_text() { return "TOOL WIPPENHEBEL"; }
+
+  void do_initial_stuff() {
+  }
+  void do_loop_stuff() {
+    cylinder_wippenhebel.stroke(2000,0);
+    if (cylinder_wippenhebel.stroke_completed()) {
+      set_loop_completed();
+    }
+  }
+};
+
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -831,17 +963,27 @@ void setup() {
   set_initial_cylinder_states();
   //------------------------------------------------
   // SETUP PIN MODES:
-  // n.a.
+  pinMode(FOERDERZYLINDER_AUS, OUTPUT);
+  pinMode(FOERDERZYLINDER_EIN, OUTPUT);
 
   //------------------------------------------------
   // PUSH THE CYCLE STEPS INTO THE VECTOR CONTAINER:
   // PUSH SEQUENCE = CYCLE SEQUENCE!
-  main_cycle_steps.push_back(new User_do_stuff);
-  main_cycle_steps.push_back(new Release_air);
-  main_cycle_steps.push_back(new Release_brake);
-  main_cycle_steps.push_back(new Sledge_back);
-  main_cycle_steps.push_back(new Cut_strap);
-  main_cycle_steps.push_back(new Feed_straps);
+  main_cycle_steps.push_back(new Luft_ablassen);
+  main_cycle_steps.push_back(new Vorklemme_auf);
+  main_cycle_steps.push_back(new Schlitten_zurueck);
+  main_cycle_steps.push_back(new Nachklemme_auf);
+  main_cycle_steps.push_back(new Auswerfen);
+  main_cycle_steps.push_back(new Foerderklemme_zu);
+  main_cycle_steps.push_back(new Foerdern);
+  main_cycle_steps.push_back(new Vorklemme_zu);
+  main_cycle_steps.push_back(new Schneiden);
+  main_cycle_steps.push_back(new Foerdereinheit_auf);
+  main_cycle_steps.push_back(new Foerderzylinder_zurueck);
+  main_cycle_steps.push_back(new Tool_spannen);
+  main_cycle_steps.push_back(new Nachklemme_zu);
+  main_cycle_steps.push_back(new Tool_crimp);
+  main_cycle_steps.push_back(new Tool_wippenhebel);
   //------------------------------------------------
   // CONFIGURE THE STATE CONTROLLER:
   int no_of_main_cycle_steps = main_cycle_steps.size();
