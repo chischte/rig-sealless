@@ -633,7 +633,7 @@ void display_loop_page_1_right_side() {
 
   // UPDATE SWITCHES:
   if (state_controller.machine_is_running() != nex_state_machine_running) {
-    toggle_ds_switch("bt3");
+    toggle_ds_switch("bt0");
     nex_state_machine_running = !nex_state_machine_running;
   }
   if (cylinder_schlittenabluft.get_state() != nex_state_schlittenabluft) {
@@ -771,16 +771,16 @@ class Vorklemme_auf : public Cycle_step {
 
 // SCHLITTEN ZURÜCKFAHREN
 class Schlitten_zurueck : public Cycle_step {
-  String get_display_text() { return "SCHLITTEN ZURÜCK"; }
+  String get_display_text() { return "SCHLITTEN ZURUECK"; }
 
   void do_initial_stuff() {
     move_sledge();
   }
   void do_loop_stuff() {
-    if (sensor_sledge_startposition.switched_high()) {
-      vent_sledge();
-      set_loop_completed();
-    }
+    // if (sensor_sledge_startposition.switched_high()) {
+    //   vent_sledge();
+    // }
+      set_loop_completed();set_loop_completed();
   }
 };
 
@@ -814,7 +814,7 @@ class Auswerfen : public Cycle_step {
 
 // FÖRDERKLEMME SCHLIESSEN
 class Foerderklemme_zu : public Cycle_step {
-  String get_display_text() { return "FÖRDERKLEMME ZU"; }
+  String get_display_text() { return "FOERDERKLEMME ZU"; }
 
   void do_initial_stuff() {
     cylinder_vorschubklemme.set(1);
@@ -829,7 +829,7 @@ class Foerderklemme_zu : public Cycle_step {
 
 // FÖRDERN
 class Foerdern : public Cycle_step {
-  String get_display_text() { return "FÖRDERN"; }
+  String get_display_text() { return "FOERDERN"; }
 
   void do_initial_stuff() {
     foerderzylinder_ausfahren();
@@ -872,7 +872,7 @@ class Schneiden : public Cycle_step {
 
 // FÖRDERKLEMME ÖFFNEN
 class Foerdereinheit_auf : public Cycle_step {
-  String get_display_text() { return "FÖRDERKLEMME AUF"; }
+  String get_display_text() { return "FOERDERKLEMME AUF"; }
 
   void do_initial_stuff() {
     cylinder_vorschubklemme.set(0);
@@ -887,7 +887,7 @@ class Foerdereinheit_auf : public Cycle_step {
 
 // FÖRDERZYLINDER ZURÜCK
 class Foerderzylinder_zurueck : public Cycle_step {
-  String get_display_text() { return "FÖRDERER ZURÜCK"; }
+  String get_display_text() { return "FOERDERER ZURÜCK"; }
 
   void do_initial_stuff() { foerderzylinder_zurueckfahren(); }
   void do_loop_stuff() { set_loop_completed(); }
@@ -994,7 +994,6 @@ void setup() {
   //------------------------------------------------
   Serial.begin(115200);
   state_controller.set_auto_mode();
-  state_controller.set_machine_running();
   Serial.println("EXIT SETUP");
   //------------------------------------------------
   nextion_display_setup();
