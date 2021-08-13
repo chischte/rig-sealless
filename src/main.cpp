@@ -773,14 +773,13 @@ class Vorklemme_auf : public Cycle_step {
 class Schlitten_zurueck : public Cycle_step {
   String get_display_text() { return "SCHLITTEN ZURUECK"; }
 
-  void do_initial_stuff() {
-    move_sledge();
-  }
+  void do_initial_stuff() { move_sledge(); }
   void do_loop_stuff() {
     // if (sensor_sledge_startposition.switched_high()) {
     //   vent_sledge();
     // }
-      set_loop_completed();set_loop_completed();
+    set_loop_completed();
+    set_loop_completed();
   }
 };
 
@@ -887,7 +886,7 @@ class Foerdereinheit_auf : public Cycle_step {
 
 // FÖRDERZYLINDER ZURÜCK
 class Foerderzylinder_zurueck : public Cycle_step {
-  String get_display_text() { return "FOERDERER ZURÜCK"; }
+  String get_display_text() { return "FOERDERER ZURUECK"; }
 
   void do_initial_stuff() { foerderzylinder_zurueckfahren(); }
   void do_loop_stuff() { set_loop_completed(); }
@@ -929,10 +928,9 @@ class Nachklemme_zu : public Cycle_step {
 class Tool_crimp : public Cycle_step {
   String get_display_text() { return "TOOL CRIMP"; }
 
-  void do_initial_stuff() {
-  }
+  void do_initial_stuff() {}
   void do_loop_stuff() {
-    cylinder_crimptaste.stroke(500,1500);
+    cylinder_crimptaste.stroke(500, 1500);
     if (cylinder_crimptaste.stroke_completed()) {
       set_loop_completed();
     }
@@ -944,9 +942,11 @@ class Tool_wippenhebel : public Cycle_step {
   String get_display_text() { return "TOOL WIPPENHEBEL"; }
 
   void do_initial_stuff() {
+    counter.count_one_up(shorttime_counter);
+    counter.count_one_up(longtime_counter);
   }
   void do_loop_stuff() {
-    cylinder_wippenhebel.stroke(2000,0);
+    cylinder_wippenhebel.stroke(2000, 0);
     if (cylinder_wippenhebel.stroke_completed()) {
       set_loop_completed();
     }
