@@ -8,7 +8,7 @@ AlignTrailingComments: false
 ---
 Language: Cpp
 
-ColumnLimit: 100
+ColumnLimit: 120
 ---
 Language: JavaScript
 # Use 100 columns for JS.

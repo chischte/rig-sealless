@@ -10,7 +10,6 @@
  * RUNTIME:
  * Measured runtime: 220-250 micros
  * -----------------------------------------------------------------------------
- * TODO:
  * *****************************************************************************
  */
 
@@ -71,23 +70,29 @@ EEPROM_Counter counter;
 State_controller state_controller;
 
 // INPUT PINS:
-Debounce sensor_sledge_startposition(CONTROLLINO_A0);
-Debounce sensor_sledge_endposition(CONTROLLINO_A1);
-const byte PRESSURE_SENSOR_PIN = CONTROLLINO_A2;
+const byte PRESSURE_SENSOR_PIN = CONTROLLINO_A15;
+Debounce sensor_sledge_startposition(CONTROLLINO_A15);
+Debounce sensor_sledge_endposition(CONTROLLINO_A15);
+Debounce sensor_foerderzylinder_in(CONTROLLINO_A7); // BROWN
+Debounce sensor_foerderzylinder_out(CONTROLLINO_A6); // GREEN
+Debounce emergency_stop_signal(CONTROLLINO_A10); //
 
 // OUTPUT PINS:
-const byte FOERDERZYLINDER_AUS = CONTROLLINO_D0;
-const byte FOERDERZYLINDER_EIN = CONTROLLINO_D1;
-Cylinder cylinder_schlittenzuluft(CONTROLLINO_D2);
-Cylinder cylinder_schlittenabluft(CONTROLLINO_D3);
-Cylinder cylinder_auswerfer(CONTROLLINO_D4);
-Cylinder cylinder_vorklemme(CONTROLLINO_D5);
-Cylinder cylinder_spanntaste(CONTROLLINO_D6);
-Cylinder cylinder_crimptaste(CONTROLLINO_D7);
-Cylinder cylinder_wippenhebel(CONTROLLINO_D8);
-Cylinder cylinder_nachklemme(CONTROLLINO_D9);
-Cylinder cylinder_vorschubklemme(CONTROLLINO_D10);
-Cylinder cylinder_messer(CONTROLLINO_D11);
+const byte FOERDERZYLINDER_LOGIC_POWER = CONTROLLINO_D8; // WHITE // turn on >=50ms after start of "load voltage"
+const byte TRENNRELAIS_ZYLINDER_1 = CONTROLLINO_R4; // turn off >=100ms before logic power off
+const byte TRENNRELAIS_ZYLINDER_2 = CONTROLLINO_R5; // turn off >=100ms before logic power off
+const byte FOERDERZYLINDER_MOVE_IN = CONTROLLINO_D9; // GREY
+const byte FOERDERZYLINDER_MOVE_OUT = CONTROLLINO_D10; // PINK
+Cylinder cylinder_schlittenzuluft(CONTROLLINO_D23);
+Cylinder cylinder_schlittenabluft(CONTROLLINO_D23);
+Cylinder cylinder_auswerfer(CONTROLLINO_D23);
+Cylinder cylinder_vorklemme(CONTROLLINO_D23);
+Cylinder cylinder_spanntaste(CONTROLLINO_D23);
+Cylinder cylinder_crimptaste(CONTROLLINO_D23);
+Cylinder cylinder_wippenhebel(CONTROLLINO_D23);
+Cylinder cylinder_nachklemme(CONTROLLINO_D23);
+Cylinder cylinder_vorschubklemme(CONTROLLINO_D23);
+Cylinder cylinder_messer(CONTROLLINO_D23);
 
 Insomnia nex_reset_button_timeout(10000); // pushtime to reset counter
 Insomnia print_interval_timeout(1000);
@@ -133,8 +138,8 @@ NexTouch *nex_listen_list[] = { //
     &nex_page_1, &button_previous_step, &button_next_step, &button_reset_cycle, &switch_play_pause,
     &switch_step_auto_mode,
     // PAGE 1 RIGHT:
-    &button_schneiden, &switch_wippenhebel, &switch_entlueften, &button_schlitten,
-    &button_spanntaste, &button_crimptaste,
+    &button_schneiden, &switch_wippenhebel, &switch_entlueften, &button_schlitten, &button_spanntaste,
+    &button_crimptaste,
     // PAGE 2 LEFT:
     &nex_page_2, &button_slider_1_left, &button_slider_1_right, &nex_page_2, &button_slider_2_left,
     &button_slider_2_right, &switch_continuous_mode,
@@ -180,10 +185,7 @@ void set_initial_cylinder_states() {
   cylinder_crimptaste.set(0);
 }
 
-void reset_flag_of_current_step() {
-
-  main_cycle_steps[state_controller.get_current_step()]->reset_flags();
-}
+void reset_flag_of_current_step() { main_cycle_steps[state_controller.get_current_step()]->reset_flags(); }
 
 void stop_machine() {
   set_initial_cylinder_states();
@@ -225,13 +227,13 @@ void block_sledge() {
 }
 
 void foerderzylinder_ausfahren() {
-  digitalWrite(FOERDERZYLINDER_AUS, HIGH);
-  digitalWrite(FOERDERZYLINDER_EIN, LOW);
+  digitalWrite(FOERDERZYLINDER_MOVE_OUT, HIGH);
+  digitalWrite(FOERDERZYLINDER_MOVE_IN, LOW);
 }
 
 void foerderzylinder_zurueckfahren() {
-  digitalWrite(FOERDERZYLINDER_AUS, LOW);
-  digitalWrite(FOERDERZYLINDER_EIN, HIGH);
+  digitalWrite(FOERDERZYLINDER_MOVE_OUT, LOW);
+  digitalWrite(FOERDERZYLINDER_MOVE_IN, HIGH);
 }
 
 void vent_sledge() {
@@ -293,8 +295,7 @@ void measure_and_display_current_force() {
   static int previous_force;
   static int min_difference = 50;
 
-  if (abs(force - previous_force) >= min_difference &&
-      pressure_update_delay.delay_time_is_up(100)) {
+  if (abs(force - previous_force) >= min_difference && pressure_update_delay.delay_time_is_up(100)) {
     display_force(force);
     previous_force = force;
   }
@@ -485,9 +486,7 @@ void button_reset_shorttime_counter_push(void *ptr) {
   nex_reset_button_timeout.reset_time();
   nex_reset_button_timeout.set_flag_activated(1);
 }
-void button_reset_shorttime_counter_pop(void *ptr) {
-  nex_reset_button_timeout.set_flag_activated(0);
-}
+void button_reset_shorttime_counter_pop(void *ptr) { nex_reset_button_timeout.set_flag_activated(0); }
 
 // PAGE CHANGING EVENTS (TRIGGER UPDATE OF ALL DISPLAY ELEMENTS) ---------------
 
@@ -958,14 +957,40 @@ class Tool_wippenhebel : public Cycle_step {
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
+void monitor_emergency_signal() {
+
+  if (emergency_stop_signal.switched_low()) { // re start
+    delay(200); // turn on logic power >=50ms after load power
+    digitalWrite(FOERDERZYLINDER_LOGIC_POWER, HIGH);
+
+    delay(7000); // wait until cylinder has initialized !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    digitalWrite(TRENNRELAIS_ZYLINDER_1, HIGH);
+    digitalWrite(TRENNRELAIS_ZYLINDER_2, HIGH);
+  }
+
+  if (emergency_stop_signal.switched_high()) { // emergency stop
+    // SETUP PIN MODES:
+    digitalWrite(FOERDERZYLINDER_MOVE_IN, LOW);
+    digitalWrite(FOERDERZYLINDER_MOVE_OUT, LOW);
+
+    digitalWrite(TRENNRELAIS_ZYLINDER_1, LOW);
+    digitalWrite(TRENNRELAIS_ZYLINDER_2, LOW);
+    delay(100); // turn off logic power >= 100ms after output relays
+    digitalWrite(FOERDERZYLINDER_LOGIC_POWER, LOW);
+  }
+}
+
 // MAIN SETUP ******************************************************************
 
 void setup() {
   set_initial_cylinder_states();
   //------------------------------------------------
   // SETUP PIN MODES:
-  pinMode(FOERDERZYLINDER_AUS, OUTPUT);
-  pinMode(FOERDERZYLINDER_EIN, OUTPUT);
+  pinMode(TRENNRELAIS_ZYLINDER_1, OUTPUT);
+  pinMode(TRENNRELAIS_ZYLINDER_2, OUTPUT);
+  pinMode(FOERDERZYLINDER_LOGIC_POWER, OUTPUT);
+  pinMode(FOERDERZYLINDER_MOVE_IN, OUTPUT);
+  pinMode(FOERDERZYLINDER_MOVE_OUT, OUTPUT);
 
   //------------------------------------------------
   // PUSH THE CYCLE STEPS INTO THE VECTOR CONTAINER:
@@ -1030,6 +1055,9 @@ void run_step_or_auto_mode() {
 
 void loop() {
 
+  // MONITOR EMERGENCY SIGNAL:
+  monitor_emergency_signal();
+
   // UPDATE DISPLAY:
   nextion_display_loop();
 
@@ -1049,7 +1077,6 @@ void loop() {
     //Serial.println(runtime);
     print_interval_timeout.reset_time();
   }
-  
 }
 
 // END OF PROGRAM **************************************************************
