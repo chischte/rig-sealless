@@ -957,26 +957,42 @@ class Tool_wippenhebel : public Cycle_step {
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
+void power_on_electrocylinder() {
+  // Festo specification ELGS-BS
+  // Turn on logic power >=50ms after load power:
+  delay(200); 
+  delay(2222); // for debug only, delete if find later
+  digitalWrite(FOERDERZYLINDER_LOGIC_POWER, HIGH);
+
+  delay(7000); // wait until cylinder has initialized !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  digitalWrite(TRENNRELAIS_ZYLINDER_1, HIGH);
+  digitalWrite(TRENNRELAIS_ZYLINDER_2, HIGH);
+}
+
+void power_off_electrocylinder() {
+  digitalWrite(FOERDERZYLINDER_MOVE_IN, LOW);
+  digitalWrite(FOERDERZYLINDER_MOVE_OUT, LOW);
+
+  // Disconnect electrocylinder analog outputs:
+  digitalWrite(TRENNRELAIS_ZYLINDER_1, LOW);
+  digitalWrite(TRENNRELAIS_ZYLINDER_2, LOW);
+  // Festo specification ELGS-BS
+  // Turn off logic power >= 100ms after analog outputs:
+  delay(100); 
+  delay(2222); // for debug only, delete if find later
+  digitalWrite(FOERDERZYLINDER_LOGIC_POWER, LOW);
+}
+
 void monitor_emergency_signal() {
 
   if (emergency_stop_signal.switched_low()) { // re start
-    delay(200); // turn on logic power >=50ms after load power
-    digitalWrite(FOERDERZYLINDER_LOGIC_POWER, HIGH);
-
-    delay(7000); // wait until cylinder has initialized !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    digitalWrite(TRENNRELAIS_ZYLINDER_1, HIGH);
-    digitalWrite(TRENNRELAIS_ZYLINDER_2, HIGH);
+    power_on_electrocylinder();
   }
 
   if (emergency_stop_signal.switched_high()) { // emergency stop
     // SETUP PIN MODES:
-    digitalWrite(FOERDERZYLINDER_MOVE_IN, LOW);
-    digitalWrite(FOERDERZYLINDER_MOVE_OUT, LOW);
-
-    digitalWrite(TRENNRELAIS_ZYLINDER_1, LOW);
-    digitalWrite(TRENNRELAIS_ZYLINDER_2, LOW);
-    delay(100); // turn off logic power >= 100ms after output relays
-    digitalWrite(FOERDERZYLINDER_LOGIC_POWER, LOW);
+    power_off_electrocylinder();
+    reset_machine();
   }
 }
 
