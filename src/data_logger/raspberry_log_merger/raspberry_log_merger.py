@@ -15,5 +15,22 @@ ports = serial.tools.list_ports.comports(include_links=False)
 for port in ports :
     print('Find port '+ port.device)
 
-    
+ser = serial.Serial(
+    port='COM3',\
+    baudrate=115200,\
+    parity=serial.PARITY_NONE,\
+    stopbits=serial.STOPBITS_ONE,\
+    bytesize=serial.EIGHTBITS,\
+        timeout=0)
+
+print("connected to: " + ser.portstr)
+count=1
+
+while True:
+    for line in ser.read():
+
+        print(str(count) + str(': ') + chr(line) )
+        count = count+1
+
+ser.close()
 
