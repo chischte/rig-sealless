@@ -78,7 +78,7 @@ Debounce sensor_foerderzylinder_out(CONTROLLINO_A6); // GREEN
 Debounce emergency_stop_signal(CONTROLLINO_A10); //
 
 // OUTPUT PINS:
-const byte FOERDERZYLINDER_LOGIC_POWER = CONTROLLINO_D8; // WHITE // turn on >=50ms after start of "load voltage"
+const byte FOERDERZYLINDER_LOGIC_POWER = CONTROLLINO_R6; // WHITE // turn on >=50ms after start of "load voltage"
 const byte TRENNRELAIS_ZYLINDER_1 = CONTROLLINO_R4; // turn off >=100ms before logic power off
 const byte TRENNRELAIS_ZYLINDER_2 = CONTROLLINO_R5; // turn off >=100ms before logic power off
 const byte FOERDERZYLINDER_MOVE_IN = CONTROLLINO_D9; // GREY
@@ -957,16 +957,34 @@ class Tool_wippenhebel : public Cycle_step {
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
+
 void power_on_electrocylinder() {
   // Festo specification ELGS-BS
   // Turn on logic power >=50ms after load power:
-  delay(200); 
+  delay(200);
   delay(2222); // for debug only, delete if find later
   digitalWrite(FOERDERZYLINDER_LOGIC_POWER, HIGH);
 
   delay(7000); // wait until cylinder has initialized !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   digitalWrite(TRENNRELAIS_ZYLINDER_1, HIGH);
   digitalWrite(TRENNRELAIS_ZYLINDER_2, HIGH);
+  Serial.println("START ENDPUNKTINITIALISIERUNG ELEKTROZYLINDER:");
+
+  foerderzylinder_zurueckfahren();
+  Serial.println("FÄHRT ZUR STARTPOSITION");
+  while (!sensor_foerderzylinder_in.get_button_state()) {
+    // wait for cylinder to find startposition
+  }
+  Serial.println("STARTPOSITION ERREICHT");
+
+  foerderzylinder_ausfahren();
+  Serial.println("FÄHRT ZUR ENDPOSITION");
+  while (!sensor_foerderzylinder_out.get_button_state()) {
+    // wait for cylinder to find endposition
+  }
+  Serial.println("ENDPOSITION ERREICHT");
+  foerderzylinder_zurueckfahren();
+  Serial.println("ZYLINDERINITIALISIERUNG ABGESCHLOSSEN");
 }
 
 void power_off_electrocylinder() {
@@ -978,7 +996,7 @@ void power_off_electrocylinder() {
   digitalWrite(TRENNRELAIS_ZYLINDER_2, LOW);
   // Festo specification ELGS-BS
   // Turn off logic power >= 100ms after analog outputs:
-  delay(100); 
+  delay(100);
   delay(2222); // for debug only, delete if find later
   digitalWrite(FOERDERZYLINDER_LOGIC_POWER, LOW);
 }
@@ -1036,11 +1054,16 @@ void setup() {
   //------------------------------------------------
   Serial.begin(115200);
   state_controller.set_auto_mode();
-  Serial.println("EXIT SETUP");
   //------------------------------------------------
   nextion_display_setup();
   // REQUIRED STEP TO MAKE SKETCH WORK AFTER RESET:
   reset_flag_of_current_step();
+
+  Serial.println(emergency_stop_signal.get_button_state());
+  if (!emergency_stop_signal.get_button_state()) { // emergency stop not activated
+    power_on_electrocylinder();
+  }
+  Serial.println("EXIT SETUP");
 }
 
 // MAIN LOOP *******************************************************************
