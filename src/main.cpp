@@ -78,7 +78,7 @@ Debounce sensor_foerderzylinder_out(CONTROLLINO_A6); // GREEN
 Debounce emergency_stop_signal(CONTROLLINO_A10); //
 
 // OUTPUT PINS:
-const byte FOERDERZYLINDER_LOGIC_POWER = CONTROLLINO_R6; // WHITE // turn on >=50ms after start of "load voltage"
+const byte FOERDERZYLINDER_LOGIC_POWER_RELAY = CONTROLLINO_R6; // WHITE // turn on >=50ms after start of "load voltage"
 const byte TRENNRELAIS_ZYLINDER_1 = CONTROLLINO_R4; // turn off >=100ms before logic power off
 const byte TRENNRELAIS_ZYLINDER_2 = CONTROLLINO_R5; // turn off >=100ms before logic power off
 const byte FOERDERZYLINDER_MOVE_IN = CONTROLLINO_D9; // GREY
@@ -830,12 +830,9 @@ class Foerderklemme_zu : public Cycle_step {
 class Foerdern : public Cycle_step {
   String get_display_text() { return "FOERDERN"; }
 
-  void do_initial_stuff() {
-    foerderzylinder_ausfahren();
-    cycle_step_delay.set_unstarted();
-  }
+  void do_initial_stuff() { foerderzylinder_zurueckfahren(); }
   void do_loop_stuff() {
-    if (cycle_step_delay.delay_time_is_up(2000)) {
+    if (sensor_foerderzylinder_in.switched_high()) {
       set_loop_completed();
     }
   }
@@ -888,7 +885,7 @@ class Foerdereinheit_auf : public Cycle_step {
 class Foerderzylinder_zurueck : public Cycle_step {
   String get_display_text() { return "FOERDERER ZURUECK"; }
 
-  void do_initial_stuff() { foerderzylinder_zurueckfahren(); }
+  void do_initial_stuff() { foerderzylinder_ausfahren(); }
   void do_loop_stuff() { set_loop_completed(); }
 };
 
@@ -957,15 +954,14 @@ class Tool_wippenhebel : public Cycle_step {
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
-
 void power_on_electrocylinder() {
+  Serial.println("ELEKTROZYLINDER POWER ON:");
   // Festo specification ELGS-BS
   // Turn on logic power >=50ms after load power:
   delay(200);
-  delay(2222); // for debug only, delete if find later
-  digitalWrite(FOERDERZYLINDER_LOGIC_POWER, HIGH);
+  digitalWrite(FOERDERZYLINDER_LOGIC_POWER_RELAY, HIGH);
 
-  delay(7000); // wait until cylinder has initialized !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  delay(8000); // wait until cylinder has initialized
   digitalWrite(TRENNRELAIS_ZYLINDER_1, HIGH);
   digitalWrite(TRENNRELAIS_ZYLINDER_2, HIGH);
   Serial.println("START ENDPUNKTINITIALISIERUNG ELEKTROZYLINDER:");
@@ -973,17 +969,14 @@ void power_on_electrocylinder() {
   foerderzylinder_zurueckfahren();
   Serial.println("FÄHRT ZUR STARTPOSITION");
   while (!sensor_foerderzylinder_in.get_button_state()) {
-    // wait for cylinder to find startposition
   }
   Serial.println("STARTPOSITION ERREICHT");
 
   foerderzylinder_ausfahren();
   Serial.println("FÄHRT ZUR ENDPOSITION");
   while (!sensor_foerderzylinder_out.get_button_state()) {
-    // wait for cylinder to find endposition
   }
   Serial.println("ENDPOSITION ERREICHT");
-  foerderzylinder_zurueckfahren();
   Serial.println("ZYLINDERINITIALISIERUNG ABGESCHLOSSEN");
 }
 
@@ -996,9 +989,8 @@ void power_off_electrocylinder() {
   digitalWrite(TRENNRELAIS_ZYLINDER_2, LOW);
   // Festo specification ELGS-BS
   // Turn off logic power >= 100ms after analog outputs:
-  delay(100);
-  delay(2222); // for debug only, delete if find later
-  digitalWrite(FOERDERZYLINDER_LOGIC_POWER, LOW);
+  delay(200);
+  digitalWrite(FOERDERZYLINDER_LOGIC_POWER_RELAY, LOW);
 }
 
 void monitor_emergency_signal() {
@@ -1022,7 +1014,7 @@ void setup() {
   // SETUP PIN MODES:
   pinMode(TRENNRELAIS_ZYLINDER_1, OUTPUT);
   pinMode(TRENNRELAIS_ZYLINDER_2, OUTPUT);
-  pinMode(FOERDERZYLINDER_LOGIC_POWER, OUTPUT);
+  pinMode(FOERDERZYLINDER_LOGIC_POWER_RELAY, OUTPUT);
   pinMode(FOERDERZYLINDER_MOVE_IN, OUTPUT);
   pinMode(FOERDERZYLINDER_MOVE_OUT, OUTPUT);
 
@@ -1059,7 +1051,6 @@ void setup() {
   // REQUIRED STEP TO MAKE SKETCH WORK AFTER RESET:
   reset_flag_of_current_step();
 
-  Serial.println(emergency_stop_signal.get_button_state());
   if (!emergency_stop_signal.get_button_state()) { // emergency stop not activated
     power_on_electrocylinder();
   }
@@ -1111,7 +1102,7 @@ void loop() {
   }
 
   // DISPLAY DEBUG INFOMATION:
-  unsigned long runtime = measure_runtime();
+  //unsigned long runtime = measure_runtime();
   if (print_interval_timeout.has_timed_out()) {
     //Serial.println(runtime);
     print_interval_timeout.reset_time();
