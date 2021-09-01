@@ -11,4 +11,6 @@ The arduino_current_logger provides the raspberry_log merger with following info
 
 The raspberry_log_merger receives all info, combines them to logs and pushes the logs to firebase
 A log in firebase should look something like this:
-    2021-08-31; CycleCount=3252; TensionForce=2532N; TensionCurrentMax=32A;CrimpCurrentMax=24A
+    2021-08-31; CycleCount=3252; TensionForce=2532N; TensionCurrentMax=32A;CrimpCurrentMax=24A;
+
+https://github.com/thisbejim/Pyrebase

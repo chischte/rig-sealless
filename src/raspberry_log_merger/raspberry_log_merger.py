@@ -1,7 +1,3 @@
-# GET DATA FROM CONTROLLINO PLC
-# GET DATA FROM ARDUINO_CURRENT_LOGGER
-# MERGE DATA TO LOG
-# PUSH LOG TO FIREBASE
 
 # Show list of serial devices:
 import os
@@ -9,13 +5,21 @@ import sys
 import time
 import serial
 import serial.tools.list_ports
+from log import log
+
+# Create log objects
+log_object = log()
+
+# Search available ports:
 
 print('Search...')
 ports = serial.tools.list_ports.comports(include_links=False)
 for port in ports:
     print('Find port ' + port.device)
 
-ser_controllino = serial.Serial(
+# Define serial ports:
+
+controllino = serial.Serial(
     port='COM3',
     baudrate=115200,
     parity=serial.PARITY_NONE,
@@ -23,7 +27,7 @@ ser_controllino = serial.Serial(
     bytesize=serial.EIGHTBITS,
     timeout=0)
 
-ser_arduino = serial.Serial(
+arduino = serial.Serial(
     port='COM5',
     baudrate=115200,
     parity=serial.PARITY_NONE,
@@ -31,83 +35,54 @@ ser_arduino = serial.Serial(
     bytesize=serial.EIGHTBITS,
     timeout=0)
 
+print("connected to: " + controllino.portstr)
+print("connected to: " + arduino.portstr)
 
-print("connected to: " + ser_controllino.portstr)
-print("connected to: " + ser_arduino.portstr)
-count = 1
 
-def verify_log(log):
-    if(log==""): #  remove empty reads
-        return False
-    
-    return True
+def process_serial_read(readline):
+    if(readline.decode('utf-8')==""):
+        return
+    readline=readline.split(';')
+    if(readline[0] == 'LOG'):
+        add_info_to_log(readline)
 
-def split_log(log):
-    log=log.split(';')
+def upload_log(log_object):
+    return
 
-    return log
+def set_log_completed():
+    log_object.print_log()
+    upload_log(log_object)
+    log_object.reset_log()
 
-log_cycle_total=0
-log_cycle_reset=0
-log_force=0
-log_current_tension=0
-log_current_crimp=0
-tool_is_tensioning=False
-tool_is_crimping=False
+def add_info_to_log(self, readline):
+          
+    if readline[1] == 'CYCLE_TOTAL':
+        set_log_completed()
+        log_object.cycle_total = readline[2]
 
-def add_info_to_log(log):
-    global log_cycle_total
-    global log_cycle_reset
-    global log_force
-    global log_current_tension
-    global log_current_crimp
-    global tool_is_tensioning
-    global tool_is_crimping
-    
-    if(log[0]=='LOG'):
-        print(log)
+    if readline[1] == 'CYCLE_RESET':
+        log_object.cycle_reset = readline[2]
 
-        if log[1]=='CYCLE_TOTAL':
-            log_cycle_total=log[2]
-        
-        if log[1]=='CYCLE_RESET':
-            log_cycle_reset=log[2]
-        
-        if log[1]=='FORCE':
-            log_force=log[2]
-        
-        if log[1]=='START_TENSION':
-            tool_is_tensioning=True
-            tool_is_crimping=False
-            
-        if log[1]=='START_CRIMP':
-            tool_is_tensioning=False
-            tool_is_crimping=True
-        
-        if log[1]=='CURRENT_MAX':
-            if(tool_is_crimping):
-                log_current_crimp=log[2]
-            if(tool_is_tensioning):
-                log_current_tension=log[2]
+    if readline[1] == 'FORCE':
+        log_object.force = readline[2]
+
+    if readline[1] == 'START_TENSION':
+        log_object.set_tool_is_tensioning()
+
+    if readline[1] == 'START_CRIMP':
+        log_object.set_tool_is_crimping()
+
+    if readline[1] == 'CURRENT_MAX':
+        if(log_object.tool_is_tensioning):
+            log_object.current_tension = readline[2]
+        if(log_object.tool_is_crimping):
+            log_object.crimp_current = readline[2]
 
 while True:
 
-    line_controllino = ser_controllino.readline().decode('utf-8')
-    #print(line_controllino)
-    
-    line_arduino = ser_arduino.readline().decode('utf-8')
-    #print(line_arduino)
-
-    if(verify_log(line_controllino)):
-        log=split_log(line_controllino)
-        add_info_to_log(log)
-
-    if(verify_log(line_arduino)):
-        log=split_log(line_arduino)
-        add_info_to_log(log)
-
-    print(log_cycle_total,log_cycle_reset,log_force,log_current_tension,log_current_crimp)
-
+    # Read and process serial inputs:
+    process_serial_read(controllino.readline())
+    process_serial_read(arduino.readline())
 
     time.sleep(0.5)
 
