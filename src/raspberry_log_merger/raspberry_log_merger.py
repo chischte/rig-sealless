@@ -39,17 +39,59 @@ count = 1
 def verify_log(log):
     if(log==""): #  remove empty reads
         return False
+    
     return True
 
 def split_log(log):
-    
     log=log.split(';')
-    print(log)
 
     return log
 
+log_cycle_total=0
+log_cycle_reset=0
+log_force=0
+log_current_tension=0
+log_current_crimp=0
+tool_is_tensioning=False
+tool_is_crimping=False
+
+def add_info_to_log(log):
+    global log_cycle_total
+    global log_cycle_reset
+    global log_force
+    global log_current_tension
+    global log_current_crimp
+    global tool_is_tensioning
+    global tool_is_crimping
+    
+    if(log[0]=='LOG'):
+        print(log)
+
+        if log[1]=='CYCLE_TOTAL':
+            log_cycle_total=log[2]
+        
+        if log[1]=='CYCLE_RESET':
+            log_cycle_reset=log[2]
+        
+        if log[1]=='FORCE':
+            log_force=log[2]
+        
+        if log[1]=='START_TENSION':
+            tool_is_tensioning=True
+            tool_is_crimping=False
+            
+        if log[1]=='START_CRIMP':
+            tool_is_tensioning=False
+            tool_is_crimping=True
+        
+        if log[1]=='CURRENT_MAX':
+            if(tool_is_crimping):
+                log_current_crimp=log[2]
+            if(tool_is_tensioning):
+                log_current_tension=log[2]
 
 while True:
+
     line_controllino = ser_controllino.readline().decode('utf-8')
     #print(line_controllino)
     
@@ -57,10 +99,14 @@ while True:
     #print(line_arduino)
 
     if(verify_log(line_controllino)):
-        split_log(line_controllino)
+        log=split_log(line_controllino)
+        add_info_to_log(log)
 
     if(verify_log(line_arduino)):
-        split_log(line_arduino)
+        log=split_log(line_arduino)
+        add_info_to_log(log)
+
+    print(log_cycle_total,log_cycle_reset,log_force,log_current_tension,log_current_crimp)
 
 
     time.sleep(0.5)

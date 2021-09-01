@@ -1050,25 +1050,26 @@ void setup() {
 
   while (true) {
     static long cycle_reset = 32099;
-    String prefix_reset="LOG;CYCLE_RESET;";
-    String example_log_reset= prefix_reset + cycle_reset;
+    String prefix_reset = "LOG;CYCLE_RESET;";
+    String suffix = ";";
+    String example_log_reset = prefix_reset + cycle_reset + suffix;
     Serial.println(example_log_reset);
     delay(2000);
-    
+
     static long cycle_total = 102302;
-    String prefix_total="LOG;CYCLE_TOTAL;";
-    String example_log_total= prefix_total + cycle_total;
+    String prefix_total = "LOG;CYCLE_TOTAL;";
+    String example_log_total = prefix_total + cycle_total + suffix;
     Serial.println(example_log_total);
     delay(2000);
-    
+
     cycle_reset++;
     cycle_total++;
-    
-    Serial.println("LOG;FORCE;3042");
+
+    Serial.println("LOG;FORCE;3042;");
     delay(2000);
-    Serial.println("LOG;START_TENSION");
+    Serial.println("LOG;START_TENSION;");
     delay(2000);
-    Serial.println("LOG;START_CRIMP");
+    Serial.println("LOG;START_CRIMP;");
     delay(2000);
   }
 

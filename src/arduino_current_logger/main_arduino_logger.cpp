@@ -8,6 +8,6 @@ void setup() {
 // the loop function runs over and over again forever
 void loop() {
 
-  Serial.println("LOG;34.52"); // [A]
+  Serial.println("LOG;CURRENT_MAX;34.52;"); // [A]
   delay(1500); // wait for a second
 }
