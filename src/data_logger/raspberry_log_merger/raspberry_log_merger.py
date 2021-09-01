@@ -27,10 +27,9 @@ print("connected to: " + ser.portstr)
 count=1
 
 while True:
-    for line in ser.read():
-
-        print(str(count) + str(': ') + chr(line) )
-        count = count+1
+    line = ser.readline()
+    print(line)
+    time.sleep(0.5)
 
 ser.close()
 
