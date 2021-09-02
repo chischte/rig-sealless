@@ -25,3 +25,7 @@ src/log_manager/firebase_secret_config.py
 src/log_manager/firebase_secret_service_account.json
 
 src/log_manager/logs.csv
+
+src/log_manager/build
+src/log_manager/dist
+src/log_manager/csv_creator.spec
