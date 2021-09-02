@@ -77,7 +77,10 @@ class raspberry_log_manager():
 
     def set_log_completed(self):
         self.log_object.print_log()
-        self.upload_log()
+        # Do not upload empty log at startup:
+        if(self.log_object.cycle_total!=0):
+            self.upload_log()
+            
         self.log_object.reset_log()
 
     def add_info_to_log(self, readline):

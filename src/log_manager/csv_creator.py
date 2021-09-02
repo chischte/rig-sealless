@@ -14,7 +14,10 @@ class csv_creator():
         return
 
 if __name__ == '__main__':
+    print()
+    print('INITIALIZE DB CONNECTION ...')
     firebase_helper = firebase_helper()
+    print('GET LOGS FROM DB ...')
     logs = firebase_helper.get_logs()
 
     # Create list
@@ -31,7 +34,18 @@ if __name__ == '__main__':
         csv_tension_current = values[3]
         csv_crimp_current = values[4]
         log_list.append([csv_timestamp, csv_cycle_total, csv_cycle_reset, csv_tension_force, csv_tension_current, csv_crimp_current])
+    for log in log_list:
+        print(log)
 
     # Create CSV from list
+    print('CREATE CSV ...')
     with open('logs.csv', 'w', newline='') as file:
         csv.writer(file, delimiter=';').writerows(log_list)
+    print('CSV CREATED')
+    print('')
+    print('TRY TO OPEN CSV IN EXCEL')
+    from subprocess import Popen
+    p = Popen('logs.csv', shell=True)
+    input('Press Enter to Exit...')
+    
+
