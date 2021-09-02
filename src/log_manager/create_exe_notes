@@ -1,7 +1,0 @@
-
-
-# Throws json file not found error:
-pyinstaller --onefile --add-data "firebase_secret_service_account.json;." csv_creator.py
-
-# works (whole folder in "dist" has to be copied, but works!)
-pyinstaller --onedir --add-data "firebase_secret_service_account.json;." csv_creator.py 

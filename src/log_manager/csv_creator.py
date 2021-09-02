@@ -4,12 +4,14 @@ import csv
 from logging import log
 from firebase_helper import firebase_helper
 
+#------------------------------------------------------------------
+# TO CREATE EXECUTABLE, RUN: pyinstaller --onefile csv_creator.py
+#------------------------------------------------------------------
 
 class csv_creator():
 
     def __init__(self):
         return
-
 
 if __name__ == '__main__':
     firebase_helper = firebase_helper()
@@ -17,7 +19,7 @@ if __name__ == '__main__':
 
     # Create list
     log_list = [["TIMESTAMP", "CYCLE TOTAL", "CYCLE RESET", "TENSION FORCE [N]", "TENSION CURRENT [A]", "CRIMP CURRENT [A]"]]
-    
+
     # Get log values
     for timestamp in logs:
         values = logs[timestamp]

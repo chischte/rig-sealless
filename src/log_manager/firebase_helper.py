@@ -11,7 +11,7 @@ class firebase_helper():
             "authDomain": authDomain,
             "databaseURL": databaseURL,
             "storageBucket": storageBucket,
-            "serviceAccount": "firebase_secret_service_account.json"
+            "serviceAccount": secret_service_account_json
         }
         self.firebase = pyrebase.initialize_app(self.config)
         self.db = self.firebase.database()
