@@ -11,3 +11,9 @@ pinout/~$pinout.xlsx
 .pio/libdeps/controllino_mega/CONTROLLINO/.piopm
 
 lib/
+
+src/raspberry_log_merger/__pycache__/
+
+src/raspberry_log_merger/firebase_secret_config.py
+
+src/raspberry_log_merger/firebase_secret_service_account.json
