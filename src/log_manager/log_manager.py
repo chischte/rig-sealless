@@ -9,7 +9,7 @@ from log_object import log_object
 from firebase_helper import firebase_helper
 
 
-class raspberry_log_manager():
+class log_manager():
 
     def __init__(self):
         self.arduino = 0
@@ -20,7 +20,8 @@ class raspberry_log_manager():
     def get_list_of_serial_devices(self):
         try:
             # Search available ports:
-            print('Search...')
+            print('---------------------------------------------')
+            print('SEARCH AVAILABLE PORTS')
             ports = serial.tools.list_ports.comports(include_links=False)
             print('---------------------------------------------')
             print('PORTSCAN RESULTS:')
@@ -34,6 +35,7 @@ class raspberry_log_manager():
                 print(port.vid)
                 print(port.pid)
                 print('---------------------------------------------')
+            print('---------------------------------------------')
         except Exception as error:
             error_message = 'CAUGHT AN ERROR WHILE SEARCHING PORTS !!!'
             print(error_message, error)
@@ -43,6 +45,7 @@ class raspberry_log_manager():
         try:
             ports = serial.tools.list_ports.comports(include_links=False)
 
+            print('TRY TO FIND CONTROLLINO AND ARDUINO PORTS (BY VID AND PID):')
             for port in ports:
                 if(port.vid == 9025) and (port.pid == 66):
                     arduino_port = port.device
@@ -50,7 +53,9 @@ class raspberry_log_manager():
                 if(port.vid == 6790) and (port.pid == 29987):
                     controllino_port = port.device
                     print(f'CONTROLLINO PORT: {controllino_port}')
+            print('---------------------------------------------')
 
+            print('TRY TO CONNECT TO CONTROLLINO AND ARDUINO:')
             self.controllino = serial.Serial(
                 port=controllino_port,
                 baudrate=115200,
@@ -68,6 +73,8 @@ class raspberry_log_manager():
                 bytesize=serial.EIGHTBITS,
                 timeout=0)
             print("connected to: " + self.arduino.portstr)
+            print('---------------------------------------------')
+
         except Exception as error:
             error_message = 'CAUGHT AN ERROR WHILE TRYING TO CONNECT TO PORTS !!!'
             print(error_message, error)
@@ -123,7 +130,7 @@ class raspberry_log_manager():
 
 if __name__ == '__main__':
 
-    log_manager = raspberry_log_manager()
+    log_manager = log_manager()
 
     log_manager.get_list_of_serial_devices()
     log_manager.connect_to_serial_devices()
