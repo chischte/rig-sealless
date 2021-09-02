@@ -2,7 +2,7 @@
 from datetime import datetime
 
 
-class log:
+class log_object:
 
     def __init__(self):
         self._cycle_total = 0

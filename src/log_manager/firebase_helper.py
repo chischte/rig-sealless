@@ -3,8 +3,7 @@
 import pyrebase
 from firebase_secret_config import *
 
-
-class firebase_logger():
+class firebase_helper():
 
     def __init__(self):
         self.config = {
@@ -16,16 +15,19 @@ class firebase_logger():
         }
         self.firebase = pyrebase.initialize_app(self.config)
         self.db = self.firebase.database()
-        
-        
     
     def push(self,data):
         # self.db.push(data) # auto generated folder for every log
         # self.db.set(data) # every log overwrites previous log
         self.db.update(data) # every log generates a new line
 
+    def get_logs(self):
+        # db_data=self.db.child("logs").get()
+        db_data=self.db.get()
+        print(db_data)
+        return db_data
 
 
 if __name__ == '__main__':
 
-    firebase_logger = firebase_logger()
+    firebase_helper = firebase_helper()

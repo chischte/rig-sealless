@@ -5,16 +5,16 @@ import sys
 import time
 import serial
 import serial.tools.list_ports
-from log import log
-from firebase_logger import firebase_logger
+from log_object import log_object
+from firebase_helper import firebase_helper
 
-class rapberry_log_merger():
+class raspberry_log_manager():
 
     def __init__(self):
         self.arduino = 0
         self.controllino = 0
-        self.log_object = log()
-        self.firebase_logger = firebase_logger()
+        self.log_object = log_object()
+        self.firebase_helper = firebase_helper()
 
     def get_list_of_serial_devices(self):
         # Search available ports:
@@ -73,7 +73,7 @@ class rapberry_log_merger():
 
     def upload_log(self):
         data=self.log_object.get_db_string()
-        self.firebase_logger.push(data)
+        self.firebase_helper.push(data)
 
     def set_log_completed(self):
         self.log_object.print_log()
@@ -105,21 +105,21 @@ class rapberry_log_merger():
                 self.log_object.crimp_current = readline[2]
 
     def read_serial_ports(self):
-        log_merger.process_serial_read(self.controllino.readline())
-        log_merger.process_serial_read(self.arduino.readline())
+        log_manager.process_serial_read(self.controllino.readline())
+        log_manager.process_serial_read(self.arduino.readline())
 
 
 if __name__ == '__main__':
 
-    log_merger = rapberry_log_merger()
+    log_manager = raspberry_log_manager()
 
-    log_merger.get_list_of_serial_devices()
-    log_merger.connect_to_serial_devices()
+    log_manager.get_list_of_serial_devices()
+    log_manager.connect_to_serial_devices()
 
     while True:
 
         # Read and process serial inputs:
-        log_merger.read_serial_ports()
+        log_manager.read_serial_ports()
 
         time.sleep(0.5)
 
