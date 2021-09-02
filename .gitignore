@@ -23,3 +23,5 @@ src/log_manager/__pycache__/
 src/log_manager/firebase_secret_config.py
 
 src/log_manager/firebase_secret_service_account.json
+
+src/log_manager/logs.csv
