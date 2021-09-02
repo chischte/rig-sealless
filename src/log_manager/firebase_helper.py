@@ -22,12 +22,10 @@ class firebase_helper():
         self.db.update(data) # every log generates a new line
 
     def get_logs(self):
-        # db_data=self.db.child("logs").get()
-        db_data=self.db.get()
-        print(db_data)
+        db_data=self.db.child("logs").get().val()
         return db_data
-
 
 if __name__ == '__main__':
 
     firebase_helper = firebase_helper()
+    firebase_helper.get_logs();
