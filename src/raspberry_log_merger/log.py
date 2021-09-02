@@ -44,6 +44,7 @@ class log:
     def get_db_string(self):
         timestamp = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
         key = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        key=f"logs/{key}"
         spaghettilog = f"{self._cycle_total};{self._cycle_reset};{self._tension_force};{self._tension_current};{self._crimp_current};"
         print(spaghettilog)
         db_string = {

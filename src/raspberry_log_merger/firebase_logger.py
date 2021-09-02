@@ -20,7 +20,9 @@ class firebase_logger():
         
     
     def push(self,data):
-        self.db.push(data)
+        # self.db.push(data) # auto generated folder for every log
+        # self.db.set(data) # every log overwrites previous log
+        self.db.update(data) # every log generates a new line
 
 
 
