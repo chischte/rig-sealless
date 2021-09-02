@@ -6,10 +6,7 @@ import time
 import serial
 import serial.tools.list_ports
 from log import log
-
-# Create log objects
-log_object = log()
-
+from firebase_logger import firebase_logger
 
 class rapberry_log_merger():
 
@@ -17,6 +14,7 @@ class rapberry_log_merger():
         self.arduino = 0
         self.controllino = 0
         self.log_object = log()
+        self.firebase_logger = firebase_logger()
 
     def get_list_of_serial_devices(self):
         # Search available ports:
@@ -73,12 +71,13 @@ class rapberry_log_merger():
         if(readline[0] == 'LOG'):
             self.add_info_to_log(readline)
 
-    def upload_log(self, log_object):
-        return
+    def upload_log(self):
+        data=self.log_object.get_db_string()
+        self.firebase_logger.push(data)
 
     def set_log_completed(self):
         self.log_object.print_log()
-        self.upload_log(log_object)
+        self.upload_log()
         self.log_object.reset_log()
 
     def add_info_to_log(self, readline):
@@ -91,7 +90,7 @@ class rapberry_log_merger():
             self.log_object.cycle_reset = readline[2]
 
         if readline[1] == 'FORCE':
-            self.log_object.force = readline[2]
+            self.log_object.tension_force = readline[2]
 
         if readline[1] == 'START_TENSION':
             self.log_object.set_tool_is_tensioning()
@@ -100,9 +99,9 @@ class rapberry_log_merger():
             self.log_object.set_tool_is_crimping()
 
         if readline[1] == 'CURRENT_MAX':
-            if(log_object.tool_is_tensioning):
+            if(self.log_object.tool_is_tensioning):
                 self.log_object.current_tension = readline[2]
-            if(log_object.tool_is_crimping):
+            if(self.log_object.tool_is_crimping):
                 self.log_object.crimp_current = readline[2]
 
     def read_serial_ports(self):

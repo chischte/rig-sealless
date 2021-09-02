@@ -16,8 +16,12 @@ class firebase_logger():
         }
         self.firebase = pyrebase.initialize_app(self.config)
         self.db = self.firebase.database()
-        self.data = {"name": "Mordddtimer 'Morddty' Smidddddth"}
-        self.db.push(self.data)
+        
+        
+    
+    def push(self,data):
+        self.db.push(data)
+
 
 
 if __name__ == '__main__':
