@@ -33,9 +33,9 @@ class log:
     def print_log(self):
         print('---------------------------------')
         print(f'LOG')
-        print(f'starttime:{datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
-        print(f'cyclecount total: {self._cycle_total}')
-        print(f'cyclecout reset: {self._cycle_reset}')
+        print(f'starttime: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
+        print(f'cycle count total: {self._cycle_total}')
+        print(f'cycle count reset: {self._cycle_reset}')
         print(f'tensioning force: {self._force}N')
         print(f'tensioning current: {self._tension_current}A')
         print(f'crimping current: {self._crimp_current}A')
