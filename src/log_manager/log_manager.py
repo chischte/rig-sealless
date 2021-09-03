@@ -107,9 +107,12 @@ class log_manager():
         self.log_object.reset_log()
 
     def send_email(self, readline):
-        if readline[1] == 'STOPPED':
+        
+        if readline[1] == 'MACHINE_STOPPED':
+            print('SEND EMAIL')
             self.email_helper.send_message_machine_stopped()
         if readline[1] == 'BUTTON_PUSHED':
+            print('SEND EMAIL')
             self.email_helper.send_message_button_pushed()
 
     def add_info_to_log(self, readline):
@@ -121,7 +124,7 @@ class log_manager():
         if readline[1] == 'CYCLE_RESET':
             self.log_object.cycle_reset = readline[2]
 
-        if readline[1] == 'FORCE':
+        if readline[1] == 'FORCE_TENSION':
             self.log_object.tension_force = readline[2]
 
         if readline[1] == 'START_TENSION':

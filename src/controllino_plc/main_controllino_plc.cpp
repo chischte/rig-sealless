@@ -77,6 +77,7 @@ Debounce sensor_sledge_endposition(CONTROLLINO_A15);
 Debounce sensor_foerderzylinder_in(CONTROLLINO_A7); // BROWN
 Debounce sensor_foerderzylinder_out(CONTROLLINO_A6); // GREEN
 Debounce emergency_stop_signal(CONTROLLINO_A10); //
+Debounce email_button(CONTROLLINO_A0); //
 
 // OUTPUT PINS:
 const byte FOERDERZYLINDER_LOGIC_POWER_RELAY = CONTROLLINO_R6; // WHITE // turn on >=50ms after start of "load voltage"
@@ -98,8 +99,39 @@ Cylinder cylinder_messer(CONTROLLINO_D23);
 Insomnia nex_reset_button_timeout(10000); // pushtime to reset counter
 Insomnia print_interval_timeout(1000);
 Insomnia erase_force_value_timeout(10000);
+Insomnia machine_stopped_error_timeout(60000);
 Insomnia pressure_update_delay;
 Insomnia cycle_step_delay;
+
+// LOGS AND EMAILS: ------------------------------------------------------------
+
+void send_log_cycle_reset(long value) {
+  Serial.print("LOG;CYCLE_RESET;");
+  Serial.print(value);
+  Serial.println(";");
+}
+void send_log_cycle_total(long value) {
+  Serial.print("LOG;CYCLE_TOTAL;");
+  Serial.print(value);
+}
+void send_log_force_tension(long value) {
+  Serial.print("LOG;FORCE_TENSION;");
+  Serial.print(value);
+  Serial.println(";");
+}
+void send_log_start_tensioning() { //
+  Serial.println("LOG;START_TENSION;");
+}
+void send_log_start_crimping() { //
+  Serial.println("LOG;START_CRIMP;");
+}
+
+void send_email_machine_stopped() { //
+  Serial.println("EMAIL;MACHINE_STOPPED;");
+}
+void send_email_button_pushed() { //
+  Serial.println("EMAIL;BUTTON_PUSHED;");
+}
 
 // NEXTION DISPLAY OBJECTS *****************************************************
 
@@ -285,6 +317,7 @@ void measure_and_display_max_force() {
   }
 
   if (erase_force_value_timeout.has_timed_out()) {
+    send_log_force_tension(max_force);
     max_force = -1; // negative to make certain value updates
     previous_max_force = -1;
     erase_force_value_timeout.reset_time();
@@ -384,6 +417,7 @@ void set_momentary_button_high_or_low(String button, bool state) {
 void switch_play_pause_push(void *ptr) {
   state_controller.toggle_machine_running_state();
   nex_state_machine_running = !nex_state_machine_running;
+  machine_stopped_error_timeout.reset_time();
 }
 
 void switch_step_auto_mode_push(void *ptr) {
@@ -895,6 +929,7 @@ class Tool_spannen : public Cycle_step {
   String get_display_text() { return "TOOL SPANNEN"; }
 
   void do_initial_stuff() {
+    send_log_start_tensioning();
     block_sledge();
     cylinder_spanntaste.set(1);
     cycle_step_delay.set_unstarted();
@@ -926,7 +961,7 @@ class Nachklemme_zu : public Cycle_step {
 class Tool_crimp : public Cycle_step {
   String get_display_text() { return "TOOL CRIMP"; }
 
-  void do_initial_stuff() {}
+  void do_initial_stuff() { send_log_start_crimping(); }
   void do_loop_stuff() {
     cylinder_crimptaste.stroke(500, 1500);
     if (cylinder_crimptaste.stroke_completed()) {
@@ -941,7 +976,9 @@ class Tool_wippenhebel : public Cycle_step {
 
   void do_initial_stuff() {
     counter.count_one_up(shorttime_counter);
+    send_log_cycle_reset(counter.get_value(shorttime_counter));
     counter.count_one_up(longtime_counter);
+    send_log_cycle_total(counter.get_value(longtime_counter));
   }
   void do_loop_stuff() {
     cylinder_wippenhebel.stroke(2000, 0);
@@ -1048,30 +1085,6 @@ void setup() {
   Serial.begin(115200);
   state_controller.set_auto_mode();
 
-  // while (true) {
-  //   static long cycle_reset = 32099;
-  //   String prefix_reset="LOG;CYCLE_RESET;";
-  //   String example_log_reset= prefix_reset + cycle_reset;
-  //   Serial.println(example_log_reset);
-  //   delay(2000);
-    
-  //   static long cycle_total = 102302;
-  //   String prefix_total="LOG;CYCLE_TOTAL;";
-  //   String example_log_total= prefix_total + cycle_total;
-  //   Serial.println(example_log_total);
-  //   delay(2000);
-    
-  //   cycle_reset++;
-  //   cycle_total++;
-    
-  //   Serial.println("LOG;FORCE;3042");
-  //   delay(2000);
-  //   Serial.println("LOG;START_TENSION");
-  //   delay(2000);
-  //   Serial.println("LOG;START_CRIMP");
-  //   delay(2000);
-  // }
-
   //------------------------------------------------
   nextion_display_setup();
   // REQUIRED STEP TO MAKE SKETCH WORK AFTER RESET:
@@ -1084,6 +1097,15 @@ void setup() {
 }
 
 // MAIN LOOP *******************************************************************
+
+void monitor_machine_stopped_error_timeout() {
+  if (machine_stopped_error_timeout.has_timed_out()) {
+    state_controller.set_machine_stop();
+    send_email_machine_stopped();
+    show_info_field();
+    display_text_in_info_field("TIMEOUT_ERROR");
+  }
+}
 
 void run_step_or_auto_mode() {
 
@@ -1098,11 +1120,21 @@ void run_step_or_auto_mode() {
     if (state_controller.is_in_step_mode()) {
       state_controller.set_machine_stop();
     }
+    // IF MACHINE STATE IS RUNNING IN AUTO MODE,
+    // THE "MACHINE STOPPED ERROR TIMEOUT" RESETS AFTER EVERY STEP:
+    if (state_controller.is_in_auto_mode() && state_controller.machine_is_running()) {
+      machine_stopped_error_timeout.reset_time();
+    }
   }
 
   // IF MACHINE STATE IS "RUNNING", RUN CURRENT STEP:
   if (state_controller.machine_is_running()) {
     main_cycle_steps[state_controller.get_current_step()]->do_stuff();
+  }
+
+  // MONITOR "MACHINE STOPPED ERROR TIMEOUT":
+  if (state_controller.machine_is_running()) {
+    monitor_machine_stopped_error_timeout();
   }
 
   // MEASURE AND DISPLAY PRESSURE

@@ -9,6 +9,10 @@ class email_helper():
 
     def __init__(self):
         self.sender = 'dauertest.bst@gmail.com'
+        #'m.neeser@signode.com'
+        #'b.hubschmid@signode.com'
+        #'a.keller@signode.com'
+        
         self.receivers = ['m.wettstein@signode.com']
 
     def send_mail(self, subject, message_body):
@@ -16,10 +20,14 @@ class email_helper():
         msg['Subject'] = subject
         msg['From'] = self.sender
         msg['To'] = ','.join(self.receivers)
-        s = smtplib.SMTP_SSL(host='smtp.gmail.com', port=465)
-        s.login(user='dauertest.bst', password=email_password)
-        s.sendmail(self.sender, self.receivers, msg.as_string())
-        s.quit()
+        try:
+            s = smtplib.SMTP_SSL(host='smtp.gmail.com', port=465)
+            s.login(user='dauertest.bst', password=email_password)
+            s.sendmail(self.sender, self.receivers, msg.as_string())
+            s.quit()
+        except Exception as error:
+            error_message = 'SEND EMAIL DID NOT WORK !!!'
+            print(error_message, error)
 
     def send_message_machine_stopped(self):
         datestamp = datetime.now().strftime("%d/%m/%Y")
@@ -27,14 +35,17 @@ class email_helper():
         subject = f'BST DAUERTEST HAT GESTOPPT'
         message_body = f'\
         <h2> BST DAUERTEST HAT GESTOPPT AM {datestamp} UM {timestamp} UHR\
-        <h3>Obwohl der Dauertest im Automatikbetrieb lief, wurde während 60 Sekunden\
-        <br>kein Tool-Zyklus mehr erfolgreich durchgeführt.\
+        <h3>Obwohl der Dauertest im Automatikbetrieb war, wurde während 60 Sekunden \
+        kein Tool-Zyklus mehr erfolgreich durchgeführt.\
         <p>Mögliche Ursachen:\
             <ul>\
             <li>Band leer\
             <li>Störung am Gerät\
             <li>Störung Dauertestrig\
             <li>Störung Steuerung\
+            </ul>\
+        <h3>Der Log mit den aktuellen Messdaten kann hier eingesehen werden: \
+        <p>"T:\Dauer Test\sealles_log.lnk"\
             '
         self.send_mail(subject, message_body)
 
@@ -46,9 +57,7 @@ class email_helper():
         <h2> JEMAND HAT DEN KNOPF GEDRÜCKT AM {datestamp} UM {timestamp} UHR\
         <p>Mögliche Ursachen:\
             <ul>\
-            <li>Beni hat den Knopf gedrückt\
-            <li>Michi hat den Knopf gedrückt\
-            <li>Jemand anderes hat den Knopf gedrückt\
+            <li>Jemand hat den Knopf gedrückt\
             '
         self.send_mail(subject, message_body)
 
@@ -56,4 +65,4 @@ if __name__ == '__main__':
     
     email_helper = email_helper()
     email_helper.send_message_machine_stopped()
-    email_helper.send_message_button_pushed()
+    # email_helper.send_message_button_pushed()
