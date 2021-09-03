@@ -99,7 +99,7 @@ Cylinder cylinder_messer(CONTROLLINO_D23);
 Insomnia nex_reset_button_timeout(10000); // pushtime to reset counter
 Insomnia print_interval_timeout(1000);
 Insomnia erase_force_value_timeout(10000);
-Insomnia machine_stopped_error_timeout(60000);
+Insomnia machine_stopped_error_timeout(10000);
 Insomnia pressure_update_delay;
 Insomnia cycle_step_delay;
 
@@ -1103,7 +1103,7 @@ void monitor_machine_stopped_error_timeout() {
     state_controller.set_machine_stop();
     send_email_machine_stopped();
     show_info_field();
-    display_text_in_info_field("TIMEOUT_ERROR");
+    display_text_in_info_field("TIMEOUT ERROR");
   }
 }
 
@@ -1164,6 +1164,11 @@ void loop() {
   if (print_interval_timeout.has_timed_out()) {
     //Serial.println(runtime);
     print_interval_timeout.reset_time();
+  }
+
+  // JUST FOR FUN:
+  if(email_button.switched_high()){
+    send_email_button_pushed();
   }
 }
 
