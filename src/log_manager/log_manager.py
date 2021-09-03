@@ -89,9 +89,11 @@ class log_manager():
         readline = readline.split(';')
         
         if(readline[0] == 'LOG'):
+            print(readline)
             self.add_info_to_log(readline)
         
         if(readline[0] == 'EMAIL'):
+            print(readline)
             self.send_email(readline)
 
     def upload_log(self):
@@ -109,10 +111,10 @@ class log_manager():
     def send_email(self, readline):
         
         if readline[1] == 'MACHINE_STOPPED':
-            print('SEND EMAIL')
+            print('SEND EMAIL MACHINE STOPPED')
             self.email_helper.send_message_machine_stopped()
         if readline[1] == 'BUTTON_PUSHED':
-            print('SEND EMAIL')
+            print('SEND EMAIL BUTTON PUSHED')
             self.email_helper.send_message_button_pushed()
 
     def add_info_to_log(self, readline):

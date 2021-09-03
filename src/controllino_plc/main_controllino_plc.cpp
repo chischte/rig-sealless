@@ -99,7 +99,7 @@ Cylinder cylinder_messer(CONTROLLINO_D23);
 Insomnia nex_reset_button_timeout(10000); // pushtime to reset counter
 Insomnia print_interval_timeout(1000);
 Insomnia erase_force_value_timeout(10000);
-Insomnia machine_stopped_error_timeout(20000);
+Insomnia machine_stopped_error_timeout(25000); // electrocylinder takes up to 20" to find start position
 Insomnia pressure_update_delay;
 Insomnia cycle_step_delay;
 
@@ -113,6 +113,7 @@ void send_log_cycle_reset(long value) {
 void send_log_cycle_total(long value) {
   Serial.print("LOG;CYCLE_TOTAL;");
   Serial.print(value);
+  Serial.println(";");
 }
 void send_log_force_tension(long value) {
   Serial.print("LOG;FORCE_TENSION;");
