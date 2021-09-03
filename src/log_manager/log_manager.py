@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from email_helper import email_helper
 import os
 import sys
 import time
@@ -7,6 +8,7 @@ import serial
 import serial.tools.list_ports
 from log_object import log_object
 from firebase_helper import firebase_helper
+from email_helper import email_helper
 
 
 class log_manager():
@@ -16,6 +18,7 @@ class log_manager():
         self.controllino = 0
         self.log_object = log_object()
         self.firebase_helper = firebase_helper()
+        self.email_helper = email_helper()
 
     def get_list_of_serial_devices(self):
         try:
@@ -84,8 +87,12 @@ class log_manager():
         if(readline == ""):
             return
         readline = readline.split(';')
+        
         if(readline[0] == 'LOG'):
             self.add_info_to_log(readline)
+        
+        if(readline[0] == 'EMAIL'):
+            self.send_email(readline)
 
     def upload_log(self):
         data = self.log_object.get_db_string()
@@ -98,6 +105,12 @@ class log_manager():
             self.upload_log()
 
         self.log_object.reset_log()
+
+    def send_email(self, readline):
+        if readline[1] == 'STOPPED':
+            self.email_helper.send_message_machine_stopped()
+        if readline[1] == 'BUTTON_PUSHED':
+            self.email_helper.send_message_button_pushed()
 
     def add_info_to_log(self, readline):
 
@@ -146,7 +159,6 @@ if __name__ == '__main__':
             log_manager.get_list_of_serial_devices()
             log_manager.connect_to_serial_devices()
             time.sleep(3)
-
 
         time.sleep(0.5)
 

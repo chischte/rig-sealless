@@ -21,7 +21,7 @@ class email_helper():
         s.sendmail(self.sender, self.receivers, msg.as_string())
         s.quit()
 
-    def send_message_machine_error(self):
+    def send_message_machine_stopped(self):
         datestamp = datetime.now().strftime("%d/%m/%Y")
         timestamp = datetime.now().strftime("%H:%M")
         subject = f'BST DAUERTEST HAT GESTOPPT'
@@ -38,7 +38,22 @@ class email_helper():
             '
         self.send_mail(subject, message_body)
 
+    def send_message_button_pushed(self):
+        datestamp = datetime.now().strftime("%d/%m/%Y")
+        timestamp = datetime.now().strftime("%H:%M")
+        subject = f'JEMAND HAT DEN KNOPF GEDRÜCKT !'
+        message_body = f'\
+        <h2> JEMAND HAT DEN KNOPF GEDRÜCKT AM {datestamp} UM {timestamp} UHR\
+        <p>Mögliche Ursachen:\
+            <ul>\
+            <li>Beni hat den Knopf gedrückt\
+            <li>Michi hat den Knopf gedrückt\
+            <li>Jemand anderes hat den Knopf gedrückt\
+            '
+        self.send_mail(subject, message_body)
+
 if __name__ == '__main__':
     
     email_helper = email_helper()
-    email_helper.send_message_machine_error()
+    email_helper.send_message_machine_stopped()
+    email_helper.send_message_button_pushed()
