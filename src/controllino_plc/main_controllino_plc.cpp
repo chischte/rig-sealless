@@ -99,7 +99,7 @@ Cylinder cylinder_messer(CONTROLLINO_D23);
 Insomnia nex_reset_button_timeout(10000); // pushtime to reset counter
 Insomnia print_interval_timeout(1000);
 Insomnia erase_force_value_timeout(10000);
-Insomnia machine_stopped_error_timeout(10000);
+Insomnia machine_stopped_error_timeout(20000);
 Insomnia pressure_update_delay;
 Insomnia cycle_step_delay;
 
@@ -908,7 +908,11 @@ class Foerderzylinder_zurueck : public Cycle_step {
   String get_display_text() { return "FOERDERER ZURUECK"; }
 
   void do_initial_stuff() { foerderzylinder_ausfahren(); }
-  void do_loop_stuff() { set_loop_completed(); }
+  void do_loop_stuff() {
+    if (sensor_foerderzylinder_out.switched_high()) {
+    }
+    set_loop_completed();
+  }
 };
 
 // GERÄT SPANNEN
@@ -979,16 +983,7 @@ class Tool_wippenhebel : public Cycle_step {
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
-void power_on_electrocylinder() {
-  Serial.println("ELEKTROZYLINDER POWER ON:");
-  // Festo specification ELGS-BS
-  // Turn on logic power >=50ms after load power:
-  delay(200);
-  digitalWrite(FOERDERZYLINDER_LOGIC_POWER_RELAY, HIGH);
-
-  delay(8000); // wait until cylinder has initialized
-  digitalWrite(TRENNRELAIS_ZYLINDER_1, HIGH);
-  digitalWrite(TRENNRELAIS_ZYLINDER_2, HIGH);
+void get_electrocylinder_endpoints() {
   Serial.println("START ENDPUNKTINITIALISIERUNG ELEKTROZYLINDER:");
 
   foerderzylinder_zurueckfahren();
@@ -1003,6 +998,19 @@ void power_on_electrocylinder() {
   }
   Serial.println("ENDPOSITION ERREICHT");
   Serial.println("ZYLINDERINITIALISIERUNG ABGESCHLOSSEN");
+}
+
+void power_on_electrocylinder() {
+  Serial.println("ELEKTROZYLINDER POWER ON:");
+  // Festo specification ELGS-BS
+  // Turn on logic power >=50ms after load power:
+  delay(200);
+  digitalWrite(FOERDERZYLINDER_LOGIC_POWER_RELAY, HIGH);
+
+  delay(8000); // wait until cylinder has initialized
+  digitalWrite(TRENNRELAIS_ZYLINDER_1, HIGH);
+  digitalWrite(TRENNRELAIS_ZYLINDER_2, HIGH);
+  // get_electrocylinder_endpoints();
 }
 
 void power_off_electrocylinder() {
@@ -1149,16 +1157,16 @@ void loop() {
     reset_machine();
   }
 
+  // JUST FOR FUN:
+  if (email_button.switched_high()) {
+    send_email_button_pushed();
+  }
+
   // DISPLAY DEBUG INFOMATION:
   //unsigned long runtime = measure_runtime();
   if (print_interval_timeout.has_timed_out()) {
     //Serial.println(runtime);
     print_interval_timeout.reset_time();
-  }
-
-  // JUST FOR FUN:
-  if (email_button.switched_high()) {
-    send_email_button_pushed();
   }
 }
 
