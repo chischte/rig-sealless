@@ -174,7 +174,7 @@ NexTouch *nex_listen_list[] = { //
     &button_crimptaste,
     // PAGE 2 LEFT:
     &nex_page_2, &button_slider_1_left, &button_slider_1_right, &nex_page_2, &button_slider_2_left,
-    &button_slider_2_right, 
+    &button_slider_2_right,
     // PAGE 2 RIGHT:
     &button_reset_shorttime_counter,
     // END OF LISTEN LIST:
@@ -226,6 +226,7 @@ void stop_machine() {
 
 void reset_machine() {
   state_controller.set_machine_stop();
+  state_controller.set_error_mode(false);
   set_initial_cylinder_states();
   clear_text_field("t4");
   hide_info_field();
@@ -1087,6 +1088,7 @@ void setup() {
 void monitor_machine_stopped_error_timeout() {
   if (machine_stopped_error_timeout.has_timed_out()) {
     state_controller.set_machine_stop();
+    state_controller.set_error_mode(true);
     send_email_machine_stopped();
     show_info_field();
     display_text_in_info_field("TIMEOUT ERROR");
@@ -1124,7 +1126,9 @@ void run_step_or_auto_mode() {
   }
 
   // MEASURE AND DISPLAY PRESSURE
-  measure_and_display_max_force();
+  if (!state_controller.is_in_error_mode()) {
+    measure_and_display_max_force();
+  }
 }
 
 void loop() {

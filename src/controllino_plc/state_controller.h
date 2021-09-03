@@ -7,9 +7,9 @@
  * 
  * 2) auto_mode
  * 
- * 3) error_mode
+ * 3) error_mode (error mode can run independently, on top of other modes)
  *
- * 4) reset mode (reset can run independently, on top of all other modes)
+ * 4) reset mode (reset can run independently, on top of other modes)
  * 
  * *****************************************************************************
  */
@@ -32,7 +32,7 @@ public:
   void set_auto_mode();
   bool is_in_auto_mode();
 
-  void set_error_mode();
+  void set_error_mode(bool error_mode);
   bool is_in_error_mode();
 
   void set_reset_mode(bool reset_state);

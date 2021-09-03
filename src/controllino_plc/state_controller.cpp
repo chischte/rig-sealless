@@ -14,7 +14,6 @@ void State_controller::set_no_of_steps(int number_of_steps) { _number_of_main_cy
 void State_controller::set_step_mode() {
   _step_mode = true;
   _auto_mode = false;
-  _error_mode = false;
 }
 bool State_controller::is_in_step_mode() { return _step_mode; }
 
@@ -22,15 +21,12 @@ bool State_controller::is_in_step_mode() { return _step_mode; }
 void State_controller::set_auto_mode() {
   _step_mode = false;
   _auto_mode = true;
-  _error_mode = false;
 }
 bool State_controller::is_in_auto_mode() { return _auto_mode; }
 
 // ERROR MODE -------------------------------------------------------------
-void State_controller::set_error_mode() {
-  _step_mode = false;
-  _auto_mode = false;
-  _error_mode = true;
+void State_controller::set_error_mode(bool error_mode) {
+  _error_mode = error_mode;
 }
 
 bool State_controller::is_in_error_mode() { return _error_mode; }
