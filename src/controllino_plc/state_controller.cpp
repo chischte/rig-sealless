@@ -5,24 +5,16 @@
 #include "state_controller.h"
 
 // CONSTRUCTORS ----------------------------------------------------------------
-State_controller::State_controller(int number_of_steps) {
-  _number_of_main_cycle_steps = number_of_steps;
-}
+State_controller::State_controller(int number_of_steps) { _number_of_main_cycle_steps = number_of_steps; }
 State_controller::State_controller() {}
 
-void State_controller::set_no_of_steps(int number_of_steps) {
-  _number_of_main_cycle_steps = number_of_steps;
-}
-
-void State_controller::set_no_of_continuous_steps(int number_of_steps) {
-  _number_of_continuous_cycle_steps = number_of_steps;
-}
+void State_controller::set_no_of_steps(int number_of_steps) { _number_of_main_cycle_steps = number_of_steps; }
 
 // STEP MODE -------------------------------------------------------------------
 void State_controller::set_step_mode() {
   _step_mode = true;
   _auto_mode = false;
-  _continuous_mode = false;
+  _error_mode = false;
 }
 bool State_controller::is_in_step_mode() { return _step_mode; }
 
@@ -30,18 +22,18 @@ bool State_controller::is_in_step_mode() { return _step_mode; }
 void State_controller::set_auto_mode() {
   _step_mode = false;
   _auto_mode = true;
-  _continuous_mode = false;
+  _error_mode = false;
 }
 bool State_controller::is_in_auto_mode() { return _auto_mode; }
 
-// CONTINUOUS MODE -------------------------------------------------------------
-void State_controller::set_continuous_mode() {
+// ERROR MODE -------------------------------------------------------------
+void State_controller::set_error_mode() {
   _step_mode = false;
   _auto_mode = false;
-  _continuous_mode = true;
+  _error_mode = true;
 }
 
-bool State_controller::is_in_continuous_mode() { return _continuous_mode; }
+bool State_controller::is_in_error_mode() { return _error_mode; }
 
 // RESET MODE ------------------------------------------------------------------
 void State_controller::set_reset_mode(bool reset_mode) { _reset_mode = reset_mode; }
@@ -51,9 +43,7 @@ bool State_controller::reset_mode_is_active() {
   return reset_mode;
 }
 
-void State_controller::set_run_after_reset(bool run_after_reset) {
-  _run_after_reset = run_after_reset;
-}
+void State_controller::set_run_after_reset(bool run_after_reset) { _run_after_reset = run_after_reset; }
 
 bool State_controller::run_after_reset_is_active() {
   bool run_after_reset = _run_after_reset;
@@ -85,41 +75,21 @@ bool State_controller::machine_is_running() {
 
 // STEP MANAGEMENT FOR ALL MODES ---------------------------------------------
 void State_controller::switch_to_next_step() {
-  if (_step_mode || _auto_mode) {
-    _current_main_cycle_step++;
-    if (_current_main_cycle_step == _number_of_main_cycle_steps) {
-      _current_main_cycle_step = 0;
-    }
-  }
-  if (_continuous_mode) {
-    _current_continuous_cycle_step++;
-    if (_current_continuous_cycle_step == _number_of_continuous_cycle_steps) {
-      _current_continuous_cycle_step = 0;
-    }
+  _current_main_cycle_step++;
+  if (_current_main_cycle_step == _number_of_main_cycle_steps) {
+    _current_main_cycle_step = 0;
   }
 }
 
 void State_controller::switch_to_previous_step() {
-  if (_step_mode || _auto_mode) {
-    if (_current_main_cycle_step > 0) {
-      _current_main_cycle_step--;
-    }
-  }
-  if (_continuous_mode) {
-    if (_current_continuous_cycle_step > 0) {
-      _current_continuous_cycle_step--;
-    }
+  if (_current_main_cycle_step > 0) {
+    _current_main_cycle_step--;
   }
 }
 
 int State_controller::get_current_step() {
   int current_cycle_step;
-  if (_step_mode || _auto_mode) {
-    current_cycle_step = _current_main_cycle_step;
-  }
-  if (_continuous_mode) {
-    current_cycle_step = _current_continuous_cycle_step;
-  }
+  current_cycle_step = _current_main_cycle_step;
   return current_cycle_step;
 }
 
@@ -129,6 +99,4 @@ bool State_controller::step_switch_has_happend() {
   return step_has_changed;
 }
 
-void State_controller::set_current_step_to(int cycle_step) {
-  _current_main_cycle_step = cycle_step;
-}
+void State_controller::set_current_step_to(int cycle_step) { _current_main_cycle_step = cycle_step; }

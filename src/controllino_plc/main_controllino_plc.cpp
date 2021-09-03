@@ -157,7 +157,6 @@ NexButton button_slider_1_left = NexButton(2, 5, "b1");
 NexButton button_slider_1_right = NexButton(2, 6, "b2");
 NexButton button_slider_2_left = NexButton(2, 16, "b5");
 NexButton button_slider_2_right = NexButton(2, 17, "b6");
-NexDSButton switch_continuous_mode = NexDSButton(2, 18, "bt3");
 
 // PAGE 2 - RIGHT SIDE ---------------------------------------------------------
 NexButton button_reset_shorttime_counter = NexButton(2, 12, "b4");
@@ -175,7 +174,7 @@ NexTouch *nex_listen_list[] = { //
     &button_crimptaste,
     // PAGE 2 LEFT:
     &nex_page_2, &button_slider_1_left, &button_slider_1_right, &nex_page_2, &button_slider_2_left,
-    &button_slider_2_right, &switch_continuous_mode,
+    &button_slider_2_right, 
     // PAGE 2 RIGHT:
     &button_reset_shorttime_counter,
     // END OF LISTEN LIST:
@@ -191,7 +190,6 @@ bool nex_state_schlittenzuluft;
 bool nex_state_messer;
 bool nex_state_machine_running;
 bool nex_state_step_mode = true;
-bool nex_state_continuous_mode;
 byte nex_prev_cycle_step;
 byte nex_current_page = 0;
 long nex_empty_slider_1;
@@ -507,11 +505,6 @@ void decrease_slider_value(int eeprom_value_number) {
   }
 }
 
-void switch_continuous_mode_push(void *ptr) {
-  state_controller.set_continuous_mode();
-  nex_state_continuous_mode = !nex_state_continuous_mode;
-}
-
 // TOUCH EVENT FUNCTIONS PAGE 2 - RIGHT SIDE -----------------------------------
 
 void button_reset_shorttime_counter_push(void *ptr) {
@@ -550,7 +543,6 @@ void update_field_values_page_2() {
   nex_empty_slider_2 = counter.get_value(nex_empty_slider_2) - 1;
   nex_shorttime_counter = counter.get_value(nex_empty_slider_1) - 1;
   nex_longtime_counter = counter.get_value(nex_empty_slider_1) - 1;
-  //nex_state_continuous_mode = true;
 }
 
 // DECLARE DISPLAY EVENT LISTENERS *********************************************
@@ -584,7 +576,6 @@ void attach_push_and_pop() {
   button_slider_1_right.attachPush(button_upper_slider_right_push);
   button_slider_2_left.attachPush(button_lower_slider_left_push);
   button_slider_2_right.attachPush(button_lower_slider_right_push);
-  switch_continuous_mode.attachPush(switch_continuous_mode_push);
   // PAGE 2 PUSH AND POP:
   button_reset_shorttime_counter.attachPush(button_reset_shorttime_counter_push);
   button_reset_shorttime_counter.attachPop(button_reset_shorttime_counter_pop);
@@ -734,12 +725,7 @@ String add_suffix_to_eeprom_value(int eeprom_value_number, String suffix) {
   String suffixed_string = value + space + suffix;
   return suffixed_string;
 }
-void update_switches_page_2_left() {
-  if (state_controller.is_in_continuous_mode() != nex_state_continuous_mode) {
-    toggle_ds_switch("bt3");
-    nex_state_continuous_mode = !nex_state_continuous_mode;
-  }
-}
+void update_switches_page_2_left() {}
 
 // DIPLAY LOOP PAGE 2 RIGHT SIDE: ----------------------------------------------
 
@@ -1167,7 +1153,7 @@ void loop() {
   }
 
   // JUST FOR FUN:
-  if(email_button.switched_high()){
+  if (email_button.switched_high()) {
     send_email_button_pushed();
   }
 }

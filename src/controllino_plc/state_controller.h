@@ -7,7 +7,7 @@
  * 
  * 2) auto_mode
  * 
- * 3) continuous_operation_mode (separate step management)
+ * 3) error_mode
  *
  * 4) reset mode (reset can run independently, on top of all other modes)
  * 
@@ -25,7 +25,6 @@ public:
   State_controller();
 
   void set_no_of_steps(int number_of_steps);
-  void set_no_of_continuous_steps(int number_of_steps);
 
   void set_step_mode();
   bool is_in_step_mode();
@@ -33,8 +32,8 @@ public:
   void set_auto_mode();
   bool is_in_auto_mode();
 
-  void set_continuous_mode();
-  bool is_in_continuous_mode();
+  void set_error_mode();
+  bool is_in_error_mode();
 
   void set_reset_mode(bool reset_state);
   bool reset_mode_is_active();
@@ -65,15 +64,13 @@ private:
 
   // VARIABLES:
   int _number_of_main_cycle_steps;
-  int _number_of_continuous_cycle_steps;
   int _current_main_cycle_step;
-  int _current_continuous_cycle_step;
   int _previous_cycle_step;
   bool _machine_running;
   bool _step_mode;
   bool _auto_mode;
   bool _reset_mode;
   bool _run_after_reset;
-  bool _continuous_mode;
+  bool _error_mode;
 };
 #endif /* StateController_H_ */
