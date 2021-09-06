@@ -26,7 +26,7 @@ df["TENSION FORCE"]=df["TENSION FORCE"].astype(float)
 df["TENSION CURRENT"]=df["TENSION CURRENT"].astype(float)
 df["CRIMP CURRENT"]=df["CRIMP CURRENT"].astype(float)
 
-df.plot(x="TIMESTAMP", y=["CYCLES TOTAL","CYCLES RESET","TENSION FORCE","TENSION CURRENT","CRIMP CURRENT"])
+df.plot(x="TIMESTAMP", y=["CYCLES RESET","TENSION FORCE","TENSION CURRENT","CRIMP CURRENT"])
 plt.xticks(rotation=90)
 plt.show()
 
