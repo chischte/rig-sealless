@@ -106,32 +106,32 @@ Insomnia cycle_step_delay;
 // LOGS AND EMAILS: ------------------------------------------------------------
 
 void send_log_cycle_reset(long value) {
-  Serial.print("LOG;CYCLE_RESET;");
-  Serial.print(value);
-  Serial.println(";");
+  Serial1.print("LOG;CYCLE_RESET;");
+  Serial1.print(value);
+  Serial1.println(";");
 }
 void send_log_cycle_total(long value) {
-  Serial.print("LOG;CYCLE_TOTAL;");
-  Serial.print(value);
-  Serial.println(";");
+  Serial1.print("LOG;CYCLE_TOTAL;");
+  Serial1.print(value);
+  Serial1.println(";");
 }
 void send_log_force_tension(long value) {
-  Serial.print("LOG;FORCE_TENSION;");
-  Serial.print(value);
-  Serial.println(";");
+  Serial1.print("LOG;FORCE_TENSION;");
+  Serial1.print(value);
+  Serial1.println(";");
 }
 void send_log_start_tensioning() { //
-  Serial.println("LOG;START_TENSION;");
+  Serial1.println("LOG;START_TENSION;");
 }
 void send_log_start_crimping() { //
-  Serial.println("LOG;START_CRIMP;");
+  Serial1.println("LOG;START_CRIMP;");
 }
 
 void send_email_machine_stopped() { //
-  Serial.println("EMAIL;MACHINE_STOPPED;");
+  Serial1.println("EMAIL;MACHINE_STOPPED;");
 }
 void send_email_button_pushed() { //
-  Serial.println("EMAIL;BUTTON_PUSHED;");
+  Serial1.println("EMAIL;BUTTON_PUSHED;");
 }
 
 // NEXTION DISPLAY OBJECTS *****************************************************
@@ -1079,6 +1079,7 @@ void setup() {
   counter.setup(0, 1023, counter_no_of_values);
   //------------------------------------------------
   Serial.begin(115200);
+  Serial1.begin(115200); // used to log to raspberry log merger via USB-Serial-Converter @ TX1/RX1
   state_controller.set_auto_mode();
 
   //------------------------------------------------

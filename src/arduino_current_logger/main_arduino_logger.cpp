@@ -1,13 +1,14 @@
 #include <Arduino.h>
 
 void setup() {
-  // initialize digital pin LED_BUILTIN as an output.
-  pinMode(LED_BUILTIN, OUTPUT);
   Serial.begin(115200);
+  Serial1.begin(115200);
+  Serial.println("EXIT SETUP"); // [A]
+  Serial1.println("EXIT SETUP SERIAL 1"); // [A]
 }
-// the loop function runs over and over again forever
-void loop() {
 
+void loop() {
   Serial.println("LOG;CURRENT_MAX;34.52;"); // [A]
+  Serial1.println("Serial1"); // [A]
   delay(1500); // wait for a second
 }

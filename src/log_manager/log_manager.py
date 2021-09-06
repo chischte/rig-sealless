@@ -14,8 +14,17 @@ from email_helper import email_helper
 class log_manager():
 
     def __init__(self):
-        self.arduino = 0
-        self.controllino = 0
+
+        # DEVICE IDENTIFIERS:
+        # VID = VENDOR ID; PID = PRODUCT ID
+        # The USB-Serial-Converter is connected to Controllino TX1/RX1
+        self.arduino_mega_vid = 6790
+        self.arduino_mega_pid = 29987
+        self.usb_serial_converter_vid = 1659
+        self.usb_serial_converter_pid = 8963
+        # self.controllino_vid=9025 # replaced by serial converter
+        # self.controllino_pid=66 # replaced by serial converter
+
         self.log_object = log_object()
         self.firebase_helper = firebase_helper()
         self.email_helper = email_helper()
@@ -33,8 +42,8 @@ class log_manager():
                 print(port.device)
                 print(port.manufacturer)
                 print(port.hwid)
-                print(port.serial_number)  # Controllino: 85830303039351315291
-                print(port.description)  # Arduino Mega: USB-SERIAL CH340 (COM5)
+                print(port.serial_number)
+                print(port.description)
                 print(port.vid)
                 print(port.pid)
                 print('---------------------------------------------')
@@ -50,32 +59,34 @@ class log_manager():
 
             print('TRY TO FIND CONTROLLINO AND ARDUINO PORTS (BY VID AND PID):')
             for port in ports:
-                if(port.vid == 9025) and (port.pid == 66):
+                # Arduino Mega Current Logger
+                if(port.vid == self.arduino_mega_vid) and (port.pid == self.arduino_mega_pid):
                     arduino_port = port.device
                     print(f'ARDUINO PORT: {arduino_port}')
-                if(port.vid == 6790) and (port.pid == 29987):
+                # USB-Serial-Converter @ Controllino TX1/RX1
+                if(port.vid == self.usb_serial_converter_vid) and (port.pid == self.usb_serial_converter_pid):
                     controllino_port = port.device
                     print(f'CONTROLLINO PORT: {controllino_port}')
             print('---------------------------------------------')
 
             print('TRY TO CONNECT TO CONTROLLINO AND ARDUINO:')
-            self.controllino = serial.Serial(
+            self.controllino_serial_connection = serial.Serial(
                 port=controllino_port,
                 baudrate=115200,
                 parity=serial.PARITY_NONE,
                 stopbits=serial.STOPBITS_ONE,
                 bytesize=serial.EIGHTBITS,
                 timeout=0)
-            print("connected to: " + self.controllino.portstr)
+            print("connected to: " + self.controllino_serial_connection.portstr)
 
-            self.arduino = serial.Serial(
+            self.arduino_serial_connection = serial.Serial(
                 port=arduino_port,
                 baudrate=115200,
                 parity=serial.PARITY_NONE,
                 stopbits=serial.STOPBITS_ONE,
                 bytesize=serial.EIGHTBITS,
                 timeout=0)
-            print("connected to: " + self.arduino.portstr)
+            print("connected to: " + self.arduino_serial_connection.portstr)
             print('---------------------------------------------')
 
         except Exception as error:
@@ -86,14 +97,13 @@ class log_manager():
         readline = readline.decode('utf-8')
         if(readline == ""):
             return
+        print(readline)
         readline = readline.split(';')
-        
+
         if(readline[0] == 'LOG'):
-            print(readline)
             self.add_info_to_log(readline)
-        
+
         if(readline[0] == 'EMAIL'):
-            print(readline)
             self.send_email(readline)
 
     def upload_log(self):
@@ -109,7 +119,7 @@ class log_manager():
         self.log_object.reset_log()
 
     def send_email(self, readline):
-        
+
         if readline[1] == 'MACHINE_STOPPED':
             print('SEND EMAIL MACHINE STOPPED')
             self.email_helper.send_message_machine_stopped()
@@ -142,8 +152,8 @@ class log_manager():
                 self.log_object.crimp_current = readline[2]
 
     def read_serial_ports(self):
-        log_manager.process_serial_read(self.controllino.readline())
-        log_manager.process_serial_read(self.arduino.readline())
+        log_manager.process_serial_read(self.controllino_serial_connection.readline())
+        log_manager.process_serial_read(self.arduino_serial_connection.readline())
 
 
 if __name__ == '__main__':
