@@ -27,7 +27,7 @@ if __name__ == '__main__':
     timestamp=datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
     # Create list
-    log_list = []
+    log_list = [["","","","","","",""]]
  
     # Add Date info
     log_list.append(["LOGS SEALLESS TEST RIG"])
