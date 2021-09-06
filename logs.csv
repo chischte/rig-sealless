@@ -3,8 +3,7 @@ File creation date:;06.09.2021;;;;
 File creation time:;16:48:42;;;;
 ;;;;;
 ;total testrig cycles;cycles since last counter reset;maximum force;peak battery current;peak battery current
-TIMESTAMP;CYCLES TOTAL;CYCLES RESET;TENSION FORCE;TENSION CURRENT;CRIMP CURRENT
-;;;[N];[A];[A]
+TIMESTAMP;CYCLES TOTAL;CYCLES RESET;TENSION FORCE [N];TENSION CURRENT [A];CRIMP CURRENT [A]
 03.09.2021 17:52;648;2;0;0;34.52
 03.09.2021 17:52;649;3;0;0;34.52
 03.09.2021 17:52;650;4;0;0;34.52
