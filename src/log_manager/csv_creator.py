@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 
 import csv
+import getpass
 from logging import log
 from firebase_helper import firebase_helper
+from datetime import datetime
 
-#------------------------------------------------------------------
+# ------------------------------------------------------------------
 # TO CREATE EXECUTABLE, RUN: pyinstaller --onefile csv_creator.py
-#------------------------------------------------------------------
+# ------------------------------------------------------------------
+
 
 class csv_creator():
 
     def __init__(self):
         return
+
 
 if __name__ == '__main__':
     print()
@@ -20,8 +24,24 @@ if __name__ == '__main__':
     print('GET LOGS FROM DB ...')
     logs = firebase_helper.get_logs()
 
+    timestamp=datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
     # Create list
-    log_list = [["TIMESTAMP", "CYCLE TOTAL", "CYCLE RESET", "TENSION FORCE [N]", "TENSION CURRENT [A]", "CRIMP CURRENT [A]"]]
+    log_list = []
+ 
+    # Add Date info
+    log_list.append(["LOGS SEALLESS TEST RIG"])
+    log_list.append(["File creation date:", datetime.now().strftime("%d/%m/%Y")])
+    log_list.append(["File creation time:", datetime.now().strftime("%H:%M:%S")])
+    log_list.append([])
+    
+    log_list.append(["", "total testrig cycles", "cycles since last counter reset", "maximum force", "peak battery current", "peak battery current"])
+    
+    # Add column header
+    log_list.append(["TIMESTAMP", "CYCLES TOTAL", "CYCLES RESET", "TENSION FORCE", "TENSION CURRENT", "CRIMP CURRENT"])
+ 
+    # Add unit header
+    log_list.append(["", "", "", "[N]", "[A]", "[A]"])
 
     # Get log values
     for timestamp in logs:
@@ -47,5 +67,3 @@ if __name__ == '__main__':
     from subprocess import Popen
     p = Popen('logs.csv', shell=True)
     input('Press Enter to Exit...')
-    
-

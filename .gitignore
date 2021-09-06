@@ -31,3 +31,5 @@ src/log_manager/dist
 src/log_manager/csv_creator.spec
 
 src/log_manager/email_secret_config.py
+
+logs.csv
