@@ -176,6 +176,7 @@ if __name__ == '__main__':
             error_message = 'CAUGHT AN ERROR IN THE MAIN LOOP !!!'
             print(error_message, error)
             log_manager.get_list_of_serial_devices()
+            log_manager.get_ports_of_devices()
             log_manager.connect_to_serial_devices()
             time.sleep(3)
 
