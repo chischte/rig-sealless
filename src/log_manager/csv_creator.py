@@ -73,19 +73,19 @@ if __name__ == '__main__':
     time.sleep(2)
     print('CSV CREATED')
     print('--------------------------------------------------------------------------------')
-    print('TRY TO GENERATE GRAPH')
-    time.sleep(4)
-    try:
-        graph_creator=graph_creator()
-        graph_creator.plot_graph()
-    except Exception as error:
-        print(error)
-    print('--------------------------------------------------------------------------------')
     print('TRY TO OPEN CSV IN EXCEL')
     time.sleep(2)
     try:
         from subprocess import Popen
         p = Popen('logs.csv', shell=True)
+    except Exception as error:
+        print(error)
+    print('--------------------------------------------------------------------------------')
+    print('TRY TO GENERATE GRAPH')
+    time.sleep(4)
+    try:
+        graph_creator=graph_creator()
+        graph_creator.plot_graph()
     except Exception as error:
         print(error)
     print('--------------------------------------------------------------------------------')
