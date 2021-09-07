@@ -13,17 +13,27 @@ class firebase_helper():
             "storageBucket": storageBucket,
             "serviceAccount": secret_service_account_json
         }
-        self.firebase = pyrebase.initialize_app(self.config)
+        try:
+            self.firebase = pyrebase.initialize_app(self.config)
+        except Exception as error:
+            print(error)
+        
         self.db = self.firebase.database()
     
     def push(self,data):
         # self.db.push(data) # auto generated folder for every log
         # self.db.set(data) # every log overwrites previous log
-        self.db.update(data) # every log generates a new line
+        try:
+            self.db.update(data) # every log generates a new line
+        except Exception as error:
+            print(error)
 
     def get_logs(self):
-        db_data=self.db.child("logs").get().val()
-        return db_data
+        try:
+            db_data=self.db.child("logs").get().val()
+            return db_data
+        except Exception as error:
+            print(error)
 
 if __name__ == '__main__':
 

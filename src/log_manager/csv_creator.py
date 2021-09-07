@@ -5,9 +5,12 @@ import getpass
 from logging import log
 from firebase_helper import firebase_helper
 from datetime import datetime
+from graph_creator import *
+import pandas.plotting._matplotlib #required for pyinstaller
 
 # ------------------------------------------------------------------
 # TO CREATE EXECUTABLE, RUN: pyinstaller --onefile csv_creator.py
+# EXE CAN BE FOUND IN DIST FOLDER
 # ------------------------------------------------------------------
 
 
@@ -63,7 +66,19 @@ if __name__ == '__main__':
         csv.writer(file, delimiter=';').writerows(log_list)
     print('CSV CREATED')
     print('')
+    
+    print('TRY TO GENERATE GRAPH')
+    try:
+        graph_creator=graph_creator()
+        graph_creator.plot_graph()
+    except Exception as error:
+        print(error)
+    
     print('TRY TO OPEN CSV IN EXCEL')
-    from subprocess import Popen
-    p = Popen('logs.csv', shell=True)
+    try:
+        from subprocess import Popen
+        p = Popen('logs.csv', shell=True)
+    except Exception as error:
+        print(error)
+
     input('Press Enter to Exit...')

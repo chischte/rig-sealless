@@ -4,29 +4,44 @@ import pandas as pd
 import csv
 from datetime import datetime
 
-# CREATE DATAFRAOME FROM CSV
-df = pd.read_csv('logs.csv', delimiter=';')
+class graph_creator():
 
-# # SET HEADER ROW
-df.columns = df. iloc[4]
+    def __init__(self):
+        return
 
-# # SELECT DATA
-df = df.iloc[6:]
+    def plot_graph(self):
+        # CREATE DATAFRAOME FROM CSV
+        df = pd.read_csv('logs.csv', delimiter=';')
 
-# # CREATE CSV FROM DATAFRAME
-# # df.to_csv('logs_processed.csv',sep=';')
+        # # SET HEADER ROW
+        df.columns = df. iloc[4]
 
-pd.set_option("display.max.columns", None)
+        # # SELECT DATA
+        df = df.iloc[6:]
 
-df.head()
-pd.to_datetime(df["TIMESTAMP"])
-df["CYCLES TOTAL"]=df["CYCLES TOTAL"].astype(float)
-df["CYCLES RESET"]=df["CYCLES RESET"].astype(float)
-df["TENSION FORCE"]=df["TENSION FORCE"].astype(float)
-df["TENSION CURRENT"]=df["TENSION CURRENT"].astype(float)
-df["CRIMP CURRENT"]=df["CRIMP CURRENT"].astype(float)
+        # # CREATE CSV FROM DATAFRAME
+        # # df.to_csv('logs_processed.csv',sep=';')
 
-df.plot(x="TIMESTAMP", y=["CYCLES RESET","TENSION FORCE","TENSION CURRENT","CRIMP CURRENT"])
-plt.xticks(rotation=90)
-plt.show()
+        pd.set_option("display.max.columns", None)
+
+        df.head()
+        pd.to_datetime(df["TIMESTAMP"])
+        df["CYCLES TOTAL"]=df["CYCLES TOTAL"].astype(float)
+        df["CYCLES RESET"]=df["CYCLES RESET"].astype(float)
+        df["TENSION FORCE"]=df["TENSION FORCE"].astype(float)
+        df["TENSION CURRENT"]=df["TENSION CURRENT"].astype(float)
+        df["CRIMP CURRENT"]=df["CRIMP CURRENT"].astype(float)
+
+        df.plot(x="TIMESTAMP", y=["CYCLES RESET","TENSION FORCE","TENSION CURRENT","CRIMP CURRENT"])
+        plt.xticks(rotation=90)
+        plt.show()
+
+if __name__ == '__main__':
+    graph_creator=graph_creator()
+    graph_creator.plot_graph()
+
+
+
+
+
 

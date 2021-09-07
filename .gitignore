@@ -32,3 +32,5 @@ src/log_manager/csv_creator.spec
 
 src/log_manager/email_secret_config.py
 
+
+csv_creator.spec
