@@ -911,8 +911,8 @@ class Foerderzylinder_zurueck : public Cycle_step {
   void do_initial_stuff() { foerderzylinder_ausfahren(); }
   void do_loop_stuff() {
     if (sensor_foerderzylinder_out.switched_high()) {
+      set_loop_completed();
     }
-    set_loop_completed();
   }
 };
 
