@@ -1,16 +1,27 @@
 #!/usr/bin/env python3
 
-from email_helper import email_helper
 import os
 import sys
 import time
 import serial
 import serial.tools.list_ports
-from serial_scanner import *
-from log_object import log_object
-from firebase_helper import firebase_helper
-from email_helper import email_helper
+from helper.log_object import log_object
+from helper.serial_scanner import serial_scanner
+from helper.firebase_helper import firebase_helper
+from helper.email_helper import email_helper
 
+'''
+The "Controllino PLC" provides the "RPI Log Manager" with following info:
+    • cycle-number
+    • start of tensioning
+    • tension force
+    • start of crimping
+
+The "Arduino Current Logger" provides the "RPI Log Manager" with following info:
+    • peak current of the next n seconds as soon as current raises above threshold x switch_step_auto_mode_push
+
+The "RPI Log Manager" receives all info, combines them to logs and pushes the logs to firebase
+'''
 
 class log_manager():
 
@@ -123,7 +134,6 @@ class log_manager():
         self.log_object.reset_log()
 
     def send_email(self, readline):
-
         if readline[1] == 'MACHINE_STOPPED':
             print('SEND EMAIL MACHINE STOPPED')
             self.email_helper.send_message_machine_stopped()

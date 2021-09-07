@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-from csv_creator import *
-from graph_creator import *
+import time
+from helper.csv_creator import csv_creator
+from helper.graph_creator import graph_creator
 
 
 # ------------------------------------------------------------------

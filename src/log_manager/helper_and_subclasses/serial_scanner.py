@@ -2,15 +2,11 @@
 
 # USE THIS PROGRAM TO IDENTIFY CONNECTED DEVICES
 
-from email_helper import email_helper
 import os
 import sys
 import time
 import serial
 import serial.tools.list_ports
-from log_object import log_object
-from firebase_helper import firebase_helper
-from email_helper import email_helper
 
 
 class serial_scanner():

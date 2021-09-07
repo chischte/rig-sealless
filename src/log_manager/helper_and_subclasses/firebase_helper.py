@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import pyrebase
-from firebase_secret_config import *
+from helper.firebase_secret_config import *
 
 class firebase_helper():
 
