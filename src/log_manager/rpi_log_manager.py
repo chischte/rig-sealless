@@ -5,12 +5,14 @@ import sys
 import time
 import serial
 import serial.tools.list_ports
-from helper.log_object import log_object
-from helper.serial_scanner import serial_scanner
-from helper.firebase_helper import firebase_helper
-from helper.email_helper import email_helper
+from helper_and_subclasses.log_object import log_object
+from helper_and_subclasses.serial_scanner import serial_scanner
+from helper_and_subclasses.firebase_helper import firebase_helper
+from helper_and_subclasses.email_helper import email_helper
+
 
 '''
+--------------------------------------------------------------------------------
 The "Controllino PLC" provides the "RPI Log Manager" with following info:
     • cycle-number
     • start of tensioning
@@ -18,9 +20,11 @@ The "Controllino PLC" provides the "RPI Log Manager" with following info:
     • start of crimping
 
 The "Arduino Current Logger" provides the "RPI Log Manager" with following info:
-    • peak current of the next n seconds as soon as current raises above threshold x switch_step_auto_mode_push
+    • peak current after rising above a certain current threshold
 
-The "RPI Log Manager" receives all info, combines them to logs and pushes the logs to firebase
+The "RPI Log Manager" receives all info, combines them to logs and pushes
+the logs to firebase
+--------------------------------------------------------------------------------
 '''
 
 class log_manager():

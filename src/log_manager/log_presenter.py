@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import time
-from helper.csv_creator import csv_creator
-from helper.graph_creator import graph_creator
+from helper_and_subclasses.csv_creator import csv_creator
+from helper_and_subclasses.graph_creator import graph_creator
 
 
 # ------------------------------------------------------------------

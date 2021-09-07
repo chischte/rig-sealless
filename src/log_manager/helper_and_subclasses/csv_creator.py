@@ -3,7 +3,7 @@
 import csv
 import getpass
 from logging import log
-from helper.firebase_helper import firebase_helper
+from helper_and_subclasses.firebase_helper import firebase_helper
 from datetime import datetime
 
 import time

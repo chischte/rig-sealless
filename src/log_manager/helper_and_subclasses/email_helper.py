@@ -2,7 +2,7 @@ from email import message
 import smtplib
 import ssl
 from email.mime.text import MIMEText
-from helper.email_secret_config import *
+from helper_and_subclasses.email_secret_config import *
 from datetime import datetime
 
 class email_helper():
