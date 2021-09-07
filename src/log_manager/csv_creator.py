@@ -7,6 +7,7 @@ from firebase_helper import firebase_helper
 from datetime import datetime
 from graph_creator import *
 import pandas.plotting._matplotlib #required for pyinstaller
+import time
 
 # ------------------------------------------------------------------
 # TO CREATE EXECUTABLE, RUN: pyinstaller --onefile csv_creator.py
@@ -24,7 +25,11 @@ if __name__ == '__main__':
     print()
     print('INITIALIZE DB CONNECTION ...')
     firebase_helper = firebase_helper()
+    time.sleep(1.5)
+    print('--------------------------------------------------------------------------------')
     print('GET LOGS FROM DB ...')
+    time.sleep(1.5)
+    print('--------------------------------------------------------------------------------')
     logs = firebase_helper.get_logs()
 
     timestamp=datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -61,24 +66,28 @@ if __name__ == '__main__':
         print(log)
 
     # Create CSV from list
+    print('--------------------------------------------------------------------------------')
     print('CREATE CSV ...')
     with open('logs.csv', 'w', newline='') as file:
         csv.writer(file, delimiter=';').writerows(log_list)
+    time.sleep(2)
     print('CSV CREATED')
-    print('')
-    
+    print('--------------------------------------------------------------------------------')
     print('TRY TO GENERATE GRAPH')
+    time.sleep(4)
     try:
         graph_creator=graph_creator()
         graph_creator.plot_graph()
     except Exception as error:
         print(error)
-    
+    print('--------------------------------------------------------------------------------')
     print('TRY TO OPEN CSV IN EXCEL')
+    time.sleep(2)
     try:
         from subprocess import Popen
         p = Popen('logs.csv', shell=True)
     except Exception as error:
         print(error)
-
-    input('Press Enter to Exit...')
+    print('--------------------------------------------------------------------------------')
+    print('')
+    input('PRESS ENTER TO EXIT: ...')
