@@ -151,7 +151,7 @@ class log_manager():
 
         if readline[1] == 'CURRENT_MAX':
             if(self.log_object.tool_is_tensioning):
-                self.log_object.current_tension = readline[2]
+                self.log_object.tension_current = readline[2]
             if(self.log_object.tool_is_crimping):
                 self.log_object.crimp_current = readline[2]
 
