@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import csv
 from datetime import datetime
+import pandas.plotting._matplotlib #required for pyinstaller
 
 class graph_creator():
 
