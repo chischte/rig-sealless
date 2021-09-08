@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from datetime import datetime
+import numpy as np
 import pandas.plotting._matplotlib  # required for pyinstaller
 
 
@@ -13,8 +14,8 @@ sns.set_style('darkgrid')  # darkgrid, white grid, dark, white and ticks
 # sns.color_palette('deep') # seems to have no effect
 plt.rc('axes', titlesize=14)     # fontsize of the axes title
 plt.rc('axes', labelsize=9)    # fontsize of the x and y labels
-plt.rc('xtick', labelsize=9)    # fontsize of the tick labels
-plt.rc('ytick', labelsize=12)    # fontsize of the tick labels
+plt.rc('xtick', labelsize=8)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=8)    # fontsize of the tick labels
 plt.rc('legend', fontsize=12)    # legend fontsize
 plt.rc('font', size=12)          # controls default text sizes
 
@@ -71,7 +72,6 @@ class graph_creator():
         index = 0
         resolution = 50
         counter = 0
-        print(df['TIMESTAMP'])
         for ts in df['TIMESTAMP']:
             if counter == 0:
                 ticks_timestamp_array.append(ts)
@@ -81,28 +81,36 @@ class graph_creator():
             counter -= 1
 
         # CREATE PLOTS
-        fig, (ax_i_tens, ax_f_tens,ax_i_crimp,ax_n_count) = plt.subplots(4, 1, figsize=(14, 8))
-        
-        ax_i_tens.plot(f_tens_array)
-        ax_i_tens.legend(['Tensioning Force [N]'])
-        ax_i_tens.set_ylim(bottom=0, top=3000)
-        # ax_i_tens.set_xticks([])
-          
-        ax_f_tens.plot(i_tens_array)
-        ax_f_tens.legend(['Tensioning Current [A]'])
-        ax_f_tens.set_ylim(bottom=20, top=60)
+        fig, (ax_f_tens, ax_i_tens, ax_i_crimp, ax_n_count) = plt.subplots(4, 1, figsize=(14, 8))
+
+        ax_f_tens.plot(f_tens_array)
+        ax_f_tens.legend(['Tensioning Force [N]'], loc='upper center')
+        ax_f_tens.set_xlim(left=0)
+        ax_f_tens.set_xticks([])
+        ax_f_tens.set_ylim(bottom=0, top=3000)
+
+        ax_i_tens.plot(i_tens_array)
+        ax_i_tens.legend(['Tensioning Current [A]'], loc='upper center')
+        ax_i_tens.set_xlim(left=0)
+        ax_i_tens.set_xticks([])
+        ax_i_tens.set_ylim(bottom=15, top=65)
+        ax_i_tens.set_yticks([20,30,40,50,60])
 
         ax_i_crimp.plot(i_crimp_array)
-        ax_i_crimp.legend(['Crimping Current [A]'])
-        ax_i_crimp.set_ylim(bottom=20, top=60)
-        
+        ax_i_crimp.legend(['Crimping Current [A]'], loc='upper center')
+        ax_i_crimp.set_xlim(left=0)
+        ax_i_crimp.set_xticks([])
+        ax_i_crimp.set_ylim(bottom=15, top=65)
+        ax_i_crimp.set_yticks([20,30,40,50,60])
+
         ax_n_count.plot(n_reset_count_array)
-        ax_n_count.legend(['Cycle Count'])
+        ax_n_count.legend(['Cycle Count'], loc='upper center')
+        ax_n_count.set_xlim(left=0)
         ax_n_count.set_xticks(ticks_index_array)
         # ax_n_count.set_xticklabels(ticks_timestamp_array, rotation=90)
 
-        # plt.xticks(ticks_index_array, ticks_timestamp_array, rotation=45)
-        plt.tight_layout() # arrange graphs more compact
+        plt.tight_layout()  # arrange graphs more compact
+        plt.subplots_adjust(hspace=0.1)  # even more compact
         plt.show()
 
 
