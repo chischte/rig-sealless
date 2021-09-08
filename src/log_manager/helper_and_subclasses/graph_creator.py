@@ -44,22 +44,6 @@ class graph_creator():
         df["TENSION FORCE"] = df["TENSION FORCE"].astype(float)
         df["TENSION CURRENT"] = df["TENSION CURRENT"].astype(float)
         df["CRIMP CURRENT"] = df["CRIMP CURRENT"].astype(float)
-        df.plot(y=["TENSION FORCE", "TENSION CURRENT", "CRIMP CURRENT"],figsize=(15, 5))
-
-        # CREATE TICKS
-        ticks_timestamp_array = []
-        ticks_index_array = []
-        index = 0
-        resolution = 30
-        counter = 0
-        print(df['TIMESTAMP'])
-        for ts in df['TIMESTAMP']:
-            if counter == 0:
-                ticks_timestamp_array.append(ts)
-                ticks_index_array.append(index)
-                counter = resolution
-            index += 1
-            counter -= 1
 
         # CREATE TENSION FORCE VALUES
         f_tens_array = []
@@ -81,29 +65,41 @@ class graph_creator():
         for ts in df['CYCLES RESET']:
             n_reset_count_array.append(ts)
 
-        # CREATE X AXIS
-        x_array = []
-        timestamp_array = []
-        x_index = 0
+        # CREATE TICKS
+        ticks_timestamp_array = []
+        ticks_index_array = []
+        index = 0
+        resolution = 50
+        counter = 0
+        print(df['TIMESTAMP'])
         for ts in df['TIMESTAMP']:
-            timestamp_array.append(ts)
-            x_array.append(x_index)
-            x_index += 1
+            if counter == 0:
+                ticks_timestamp_array.append(ts)
+                ticks_index_array.append(index)
+                counter = resolution
+            index += 1
+            counter -= 1
 
-        fig, (ax1, ax2,ax3,ax4) = plt.subplots(4, 1, figsize=(14, 8))
+        # CREATE PLOTS
+        fig, (ax_i_tens, ax_f_tens,ax_i_crimp,ax_n_count) = plt.subplots(4, 1, figsize=(14, 8))
         
-        ax1.plot(x_array, f_tens_array)
-        ax1.legend(['Tensioning Force [N]'])
-        
+        ax_i_tens.plot(f_tens_array)
+        ax_i_tens.legend(['Tensioning Force [N]'])
+        ax_i_tens.set_ylim(bottom=0, top=3000)
+        # ax_i_tens.set_xticks([])
           
-        ax2.plot(x_array, i_tens_array)
-        ax2.legend(['Tensioning Current [A]'])
+        ax_f_tens.plot(i_tens_array)
+        ax_f_tens.legend(['Tensioning Current [A]'])
+        ax_f_tens.set_ylim(bottom=20, top=60)
 
-        ax3.plot(x_array, i_crimp_array)
-        ax3.legend(['Crimping Current [A]'])
+        ax_i_crimp.plot(i_crimp_array)
+        ax_i_crimp.legend(['Crimping Current [A]'])
+        ax_i_crimp.set_ylim(bottom=20, top=60)
         
-        ax4.plot(x_array, n_reset_count_array)
-        ax4.legend(['Cycle Count Reset'])
+        ax_n_count.plot(n_reset_count_array)
+        ax_n_count.legend(['Cycle Count'])
+        ax_n_count.set_xticks(ticks_index_array)
+        # ax_n_count.set_xticklabels(ticks_timestamp_array, rotation=90)
 
         # plt.xticks(ticks_index_array, ticks_timestamp_array, rotation=45)
         plt.tight_layout() # arrange graphs more compact
