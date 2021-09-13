@@ -14,7 +14,7 @@ const byte CLAMP_POWER_PIN2 = A4;
 Insomnia status_print_delay;
 Insomnia current_clamp_reset_timeout(12L * 60 * 1000); // 12 minutes
 
-RunningMedian currents_median_cache = RunningMedian(5);
+RunningMedian currents_median_cache = RunningMedian(10);
 
 // VARIOUS FUNCTIONS -----------------------------------------------------------
 
@@ -27,7 +27,6 @@ float get_amps_from_clamp() {
 void print_device_status() {
   if (status_print_delay.delay_time_is_up(3000)) {
     Serial.println("LOG;CURRENT_LOGGER_RUNNING;");
-    // Serial.println(get_amps_from_clamp(), 2);
   }
 }
 
@@ -83,9 +82,7 @@ void monitor_current_clamp_timeout() {
 // LOG CURRENT -----------------------------------------------------------------
 // Start monitoring when current exceeds threshold
 // Log max current once when current falls below threshold
-// The logged current is the median value of the 5 biggest measurments
-
-// Reset max running median cache
+// The logged current is the smallest value of the 5 biggest measurements
 
 void log_current(float current) {
   String prefix = "LOG;CURRENT_MAX;";
@@ -98,12 +95,14 @@ void log_max_current() {
   float current = get_amps_from_clamp();
 
   if (current_is_over_threshold(current)) {
-    if (current > currents_median_cache.getLowest()) {
+    if (isnan(currents_median_cache.getLowest())) {
+      currents_median_cache.add(current);
+    } else if (current > currents_median_cache.getLowest()) {
       currents_median_cache.add(current);
     }
   } else if (currents_median_cache.getCount() > 0) {
     log_current(currents_median_cache.getMedian());
-    currents_median_cache.clear(); // Sets current-count to 0
+    currents_median_cache.clear(); // Sets current-count to 0 and values to nans
   }
 }
 
@@ -127,6 +126,7 @@ void loop() {
   print_device_status();
 
   monitor_current_clamp_timeout();
-  delay(10);
+  delay(5); // reduce number of measurments
+  
   //Serial.println(get_amps_from_clamp(), 2); // For debug and calibration
 }
