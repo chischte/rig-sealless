@@ -2,8 +2,7 @@
 #include <Insomnia.h> //         https://github.com/chischte/insomnia-delay-library
 
 Insomnia status_print_delay;
-// Insomnia current_clamp_reset_timeout(3000);
-Insomnia current_clamp_reset_timeout(3000);
+Insomnia current_clamp_reset_timeout(12L * 60 * 1000); // 12 minutes
 
 // PIN DEFINITION -----------------------------------------------------------
 // INPUT:
@@ -15,56 +14,17 @@ const byte CLAMP_POWER_PIN2 = A4;
 
 // VARIOUS FUNCTIONS -----------------------------------------------------------
 
-void print_device_status() {
-  if (status_print_delay.delay_time_is_up(3000)) {
-    Serial.println("LOG;CURRENT_LOGGER_RUNNING;");
-  }
-}
-
 float get_amps_from_clamp() {
   // Measured: 40A = analog read 88
   float amps = float(analogRead(CURRENT_CLAMP_IN)) * 40.0 / 88.0;
   return amps;
 }
 
-// MANAGE CLAMP POWER SUPPLY ---------------------------------------------------
-// The clamp tool has to be switched off and on every few minutes to prevent
-// auto power off
-// Two output pins are used to draw less current per pin
-// Ports command are used to switch the pins simultaneously
-// PIN A3 = PORT C BIT 3
-// PIN A4 = PORT C BIT 4
-
-void switch_clamp_power_on() {
-  PORTB = PORTB | 0b00011000; // set bit 3 and 4 high, leave rest alone
-}
-
-void switch_clamp_power_off() {
-  PORTB = PORTB & 0b11100111; // clear bit 3 and 4, leave rest alone
-}
-
-void reset_current_clamp() {
-  switch_clamp_power_off();
-  delay(1000);
-  switch_clamp_power_on();
-}
-
-void monitor_current_clamp_timeout() {
-  if (current_clamp_reset_timeout.has_timed_out()) {
-    reset_current_clamp();
-    current_clamp_reset_timeout.reset_time();
+void print_device_status() {
+  if (status_print_delay.delay_time_is_up(3000)) {
+    Serial.println("LOG;CURRENT_LOGGER_RUNNING;");
+    // Serial.println(get_amps_from_clamp(), 2);
   }
-}
-
-// LOG CURRENT -----------------------------------------------------------------
-// Start monitoring when current exceeds threshold
-// Log max current once when current falls below threshold
-// Reset max current
-
-void log_current(float current) {
-  String prefix = "LOG;CURRENT_MAX;";
-  String suffix = ";";
-  Serial.println(prefix + current + suffix); // [A]
 }
 
 bool current_is_over_threshold(float current) {
@@ -80,6 +40,51 @@ bool current_is_over_threshold(float current) {
     current_is_over_threshold = false;
   }
   return current_is_over_threshold;
+}
+
+// MANAGE CLAMP POWER SUPPLY ---------------------------------------------------
+// The clamp tool has to be switched off and on every few minutes to prevent
+// auto power off
+// Two output pins are used to draw less current per pin
+// Port commands are used to switch the pins simultaneously
+// PIN A3 = PORT C BIT 3
+// PIN A4 = PORT C BIT 4
+
+void switch_clamp_power_on() {
+  PORTC = PORTC | 0b00011000; // set bit 3 and 4 high, leave rest alone
+}
+
+void switch_clamp_power_off() {
+  PORTC = PORTC & 0b11100111; // clear bit 3 and 4, leave rest alone
+}
+
+void reset_current_clamp() {
+  switch_clamp_power_off();
+  delay(1000);
+  switch_clamp_power_on();
+}
+
+void monitor_current_clamp_timeout() {
+  // Reset current clamp if timeout timed out and
+  // tool is not measuring current.
+
+  if (current_clamp_reset_timeout.has_timed_out()) {
+    if (current_is_over_threshold(get_amps_from_clamp())) {
+      reset_current_clamp();
+      current_clamp_reset_timeout.reset_time();
+    }
+  }
+}
+
+// LOG CURRENT -----------------------------------------------------------------
+// Start monitoring when current exceeds threshold
+// Log max current once when current falls below threshold
+// Reset max current
+
+void log_current(float current) {
+  String prefix = "LOG;CURRENT_MAX;";
+  String suffix = ";";
+  Serial.println(prefix + current + suffix); // [A]
 }
 
 void log_max_current() {
@@ -117,6 +122,6 @@ void loop() {
   print_device_status();
 
   monitor_current_clamp_timeout();
-
-  // Serial.println(get_amps_from_clamp(), 2); // For debug and calibration
+  delay(10);
+  //Serial.println(get_amps_from_clamp(), 2); // For debug and calibration
 }
