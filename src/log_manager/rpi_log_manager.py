@@ -35,8 +35,8 @@ class log_manager():
         # VID = VENDOR ID; PID = PRODUCT ID
 
         # ARDUINO:
-        self.arduino_mega_vid = 9025
-        self.arduino_mega_pid = 67
+        self.arduino_mega_vid = 1027
+        self.arduino_mega_pid = 24577
         self.arduino_port = 0
         self.arduino_serial = 0
 
