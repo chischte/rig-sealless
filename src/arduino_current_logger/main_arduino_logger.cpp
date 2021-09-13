@@ -1,8 +1,6 @@
 #include <Arduino.h>
 #include <Insomnia.h> //         https://github.com/chischte/insomnia-delay-library
-
-Insomnia status_print_delay;
-Insomnia current_clamp_reset_timeout(12L * 60 * 1000); // 12 minutes
+#include <RunningMedian.h>
 
 // PIN DEFINITION -----------------------------------------------------------
 // INPUT:
@@ -11,6 +9,12 @@ const byte CURRENT_CLAMP_IN = A0;
 // OUTPUT / POWER SUPPLY:
 const byte CLAMP_POWER_PIN1 = A3;
 const byte CLAMP_POWER_PIN2 = A4;
+
+// CREATE OBJECTS
+Insomnia status_print_delay;
+Insomnia current_clamp_reset_timeout(12L * 60 * 1000); // 12 minutes
+
+RunningMedian currents_median_cache = RunningMedian(5);
 
 // VARIOUS FUNCTIONS -----------------------------------------------------------
 
@@ -79,7 +83,9 @@ void monitor_current_clamp_timeout() {
 // LOG CURRENT -----------------------------------------------------------------
 // Start monitoring when current exceeds threshold
 // Log max current once when current falls below threshold
-// Reset max current
+// The logged current is the median value of the 5 biggest measurments
+
+// Reset max running median cache
 
 void log_current(float current) {
   String prefix = "LOG;CURRENT_MAX;";
@@ -88,17 +94,16 @@ void log_current(float current) {
 }
 
 void log_max_current() {
-  static float max_current = 0;
 
   float current = get_amps_from_clamp();
 
   if (current_is_over_threshold(current)) {
-    if (current > max_current) {
-      max_current = current;
+    if (current > currents_median_cache.getLowest()) {
+      currents_median_cache.add(current);
     }
-  } else if (max_current > 0) {
-    log_current(max_current);
-    max_current = 0; // reset max current.
+  } else if (currents_median_cache.getCount() > 0) {
+    log_current(currents_median_cache.getMedian());
+    currents_median_cache.clear(); // Sets current-count to 0
   }
 }
 
