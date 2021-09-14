@@ -23,9 +23,9 @@ class csv_creator():
         # Create folder if not exists:
         try:
             os.makedirs(csv_folderpath)
-            print('VERZEICHNIS ERSTELLT')
+            print('DIRECTORY CREATED')
         except:
-            print('VERZEICHNIS BEREITS VORHANDEN')
+            print('DIRECTORY EXISTS')
         
         csv_filepath=csv_folderpath+'logs.csv'
         return csv_filepath
@@ -78,12 +78,13 @@ class csv_creator():
 
         # Create CSV from list
         print('--------------------------------------------------------------------------------')
-        print('CREATE CSV ...')
+        print('CREATE CSV')
 
         with open(self.get_filepath(), 'w', newline='') as file:
             csv.writer(file, delimiter=';').writerows(log_list)
         time.sleep(2)
         print('CSV CREATED')
+       
         print('--------------------------------------------------------------------------------')
         
 if __name__ == '__main__':
