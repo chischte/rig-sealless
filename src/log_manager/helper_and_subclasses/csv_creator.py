@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 import csv
-import getpass
-from logging import log
 from helper_and_subclasses.firebase_helper import firebase_helper
 from datetime import datetime
 import os

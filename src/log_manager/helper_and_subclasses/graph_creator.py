@@ -19,15 +19,15 @@ plt.rc('xtick', labelsize=8)    # fontsize of the tick labels
 plt.rc('ytick', labelsize=8)    # fontsize of the tick labels
 plt.rc('legend', fontsize=12)    # legend fontsize
 plt.rc('font', size=12)          # controls default text sizes
-plt.rc('lines', linewidth=1.5)
+plt.rc('lines', linewidth=1.7)
 
+plt.rc('axes', facecolor='#2e2e2e')
+plt.rc('text', color='white')
 # plt.rc('lines', color='white')
 # plt.rc('axes', grid='true')
-# plt.rc('axes', facecolor='black')          # controls default text sizes
-# plt.rc('grid', color='white')          # controls default text sizes
-# plt.rc('xtick', color='white')          # controls default text sizes
-# plt.rc('ytick', color='white')          # controls default text sizes
-# plt.rc('text', color='white')
+# plt.rc('grid', color='white')
+# plt.rc('xtick', color='white')
+# plt.rc('ytick', color='white')
 
 
 class graph_creator():
@@ -97,30 +97,40 @@ class graph_creator():
             counter -= 1
 
         # CREATE PLOTS
+
+        col_off_black = '#2e2e2e'
+        col_turkis = '#2dbda8'
+        col_green = '#84b647'
+        col_yellow = '#d9a322'
+        col_orange = '#e76d3b'
+        col_red = '#cc3e4a'
+        col_pink = '#d96eae'
+        col_purple = '#7049a3'
+
         fig, (ax_f_tens, ax_i_tens, ax_i_crimp, ax_n_count) = plt.subplots(4, 1, figsize=(14, 8))
 
-        ax_f_tens.plot(f_tens_array)
+        ax_f_tens.plot(f_tens_array, color=col_green)
         ax_f_tens.legend(['Tensioning Force [N]'], loc='upper center')
         ax_f_tens.set_xlim(left=0)
         ax_f_tens.set_xticks([])
         ax_f_tens.set_ylim(bottom=0, top=3000)
 
-        ax_i_tens.plot(i_tens_array)
+        ax_i_tens.plot(i_tens_array, color=col_yellow)
         ax_i_tens.legend(['Tensioning Current [A]'], loc='upper center')
         ax_i_tens.set_xlim(left=0)
         ax_i_tens.set_xticks([])
         ax_i_tens.set_ylim(bottom=15, top=65)
         ax_i_tens.set_yticks([20, 30, 40, 50, 60])
 
-        # ax_i_crimp.plot(i_crimp_array, color="orange")
-        ax_i_crimp.plot(i_crimp_array)
+        ax_i_crimp.plot(i_crimp_array, color=col_orange)
+        # ax_i_crimp.plot(i_crimp_array)
         ax_i_crimp.legend(['Crimping Current [A]'], loc='upper center')
         ax_i_crimp.set_xlim(left=0)
         ax_i_crimp.set_xticks([])
         ax_i_crimp.set_ylim(bottom=15, top=65)
         ax_i_crimp.set_yticks([20, 30, 40, 50, 60])
 
-        ax_n_count.plot(n_reset_count_array)
+        ax_n_count.plot(n_reset_count_array, color=col_purple)
         ax_n_count.legend(['Cycle Count'], loc='upper center')
         ax_n_count.set_xlim(left=0)
         ax_n_count.set_xticks(ticks_index_array)
