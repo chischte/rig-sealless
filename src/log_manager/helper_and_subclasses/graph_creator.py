@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from datetime import datetime
-import pandas.plotting._matplotlib
 import os
 from seaborn.palettes import color_palette  # required for pyinstaller
 
