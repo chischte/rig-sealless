@@ -45,7 +45,7 @@ class email_helper():
             <li>Störung Steuerung\
             </ul>\
         <h3>Der Log mit den aktuellen Messdaten kann hier eingesehen werden: \
-        <p>"T:\Dauer Test\show_sealles_log.lnk"\
+        <p>"T:\Dauer Test\show_sealles_log.exe"\
             '
         self.send_mail(subject, message_body)
 

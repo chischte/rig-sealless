@@ -1,22 +1,30 @@
 #!/usr/bin/env python3
 
 import time
+import os
 from helper_and_subclasses.csv_creator import csv_creator
 from helper_and_subclasses.graph_creator import graph_creator
 
 
 # ------------------------------------------------------------------
-# TO CREATE EXECUTABLE, RUN: pyinstaller --onefile log_presenter.py
+# TO CREATE EXECUTABLE, RUN: pyinstaller --onefile .\show_sealless_log.py
 # EXE CAN BE FOUND IN DIST FOLDER
 # ------------------------------------------------------------------
 
-class log_presenter():
+class show_sealless_log():
 
     def __init__(self):
-        self.csv_creator = csv_creator()
+
         self.graph_creator = graph_creator()
+        self.csv_creator = csv_creator()
         return
 
+    def get_user_path(self):
+        return os.environ['USERPROFILE']
+    
+    def get_filepath(self):
+        return self.get_user_path()+"/AppData/Roaming/SeallessLog/Logs.csv"
+    
     def present_log(self):
         self.csv_creator.create_csv()
         print('--------------------------------------------------------------------------------')
@@ -24,7 +32,7 @@ class log_presenter():
         time.sleep(2)
         try:
             from subprocess import Popen
-            p = Popen('logs.csv', shell=True)
+            p = Popen(self.get_filepath(), shell=True)
         except Exception as error:
             print(error)
         print('--------------------------------------------------------------------------------')
@@ -40,5 +48,5 @@ class log_presenter():
 
 
 if __name__ == '__main__':
-    log_presenter = log_presenter()
-    log_presenter.present_log()
+    show_sealless_log = show_sealless_log()
+    show_sealless_log.present_log()

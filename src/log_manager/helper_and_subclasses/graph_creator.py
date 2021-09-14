@@ -3,6 +3,7 @@ import pandas as pd
 import seaborn as sns
 from datetime import datetime
 import pandas.plotting._matplotlib
+import os
 from seaborn.palettes import color_palette  # required for pyinstaller
 
 sns.set_style('darkgrid')  # darkgrid, white grid, dark, white and ticks
@@ -35,9 +36,15 @@ class graph_creator():
     def __init__(self):
         return
 
+    def get_user_path(self):
+        return os.environ['USERPROFILE']
+
+    def get_filepath(self):
+        return self.get_user_path()+"/AppData/Roaming/SeallessLog/Logs.csv"
+
     def plot_graph(self):
         # CREATE DATAFRAOME FROM CSV
-        df = pd.read_csv('logs.csv', delimiter=';')
+        df = pd.read_csv(self.get_filepath(), delimiter=';')
 
         # # SET HEADER ROW
         df.columns = df. iloc[4]
