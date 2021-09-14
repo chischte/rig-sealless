@@ -10,7 +10,6 @@ from helper_and_subclasses.serial_scanner import serial_scanner
 from helper_and_subclasses.firebase_helper import firebase_helper
 from helper_and_subclasses.email_helper import email_helper
 
-
 '''
 --------------------------------------------------------------------------------
 The "Controllino PLC" provides the "RPI Log Manager" with following info:
@@ -27,16 +26,24 @@ the logs to firebase
 --------------------------------------------------------------------------------
 '''
 
+
 class log_manager():
 
     def __init__(self):
+
+        # MONITOR CONNECTION STATUS:
+        self.arduino_port_is_available = False
+        self.arduino_port_is_connected = False
+
+        self.controllino_port_is_available = False
+        self.controllino_port_is_connected = False
 
         # DEVICE IDENTIFIERS:
         # VID = VENDOR ID; PID = PRODUCT ID
 
         # ARDUINO:
-        self.arduino_mega_vid = 1027
-        self.arduino_mega_pid = 24577
+        self.arduino_vid = 1027  # Arduino Uno: 9025
+        self.arduino_pid = 24577  # Arduino Uno: 67
         self.arduino_port = 0
         self.arduino_serial = 0
 
@@ -66,22 +73,50 @@ class log_manager():
                     return device_port
 
         except Exception as error:
-            error_message = 'CAUGHT AN ERROR WHILE TRYING TO FIND DEVICE PORT !!!'
+            error_message = 'CAUGHT AN ERROR WHILE TRYING TO FIND DEVICE PORT'
             print(error_message, error)
 
-    def get_ports_of_devices(self):
-        print('TRY TO FIND CONTROLLINO AND ARDUINO PORTS BY IDS:')
-        # Arduino Mega Current Logger
-        self.arduino_port = self.get_port_by_ids(
-            self.arduino_mega_vid,
-            self.arduino_mega_pid)
-        print(f'ARDUINO PORT: {self.arduino_port}')
+    def reset_arduino_connection(self):
+        self.arduino_port_is_available = False
+        self.arduino_port_is_connected = False
+        self.arduino_serial = 0
 
-        # USB-Serial-Converter @ Controllino TX1/RX1
-        self.controllino_port = self.get_port_by_ids(
-            self.usb_serial_converter_vid,
-            self.usb_serial_converter_pid)
-        print(f'CONTROLLINO PORT: {self.controllino_port}')
+    def reset_controllino_connection(self):
+        self.controllino_port_is_available = False
+        self.controllino_port_is_connected = False
+        self.controllino_serial = 0
+
+    def get_port_of_arduino(self):
+        if(self.arduino_port_is_available == False):
+            print('---------------------------------------------')
+            print('TRY TO FIND ARDUINO PORT BY IDS:')
+            # Arduino Current Logger
+            self.arduino_port = self.get_port_by_ids(
+                self.arduino_vid,
+                self.arduino_pid)
+            if(self.arduino_port):
+                self.arduino_port_is_available = True
+                print(f'ARDUINO PORT: {self.arduino_port}')
+            else:
+                print('ARDUINO PORT NOT AVAILABLE')
+                self.reset_arduino_connection
+            print('---------------------------------------------')
+
+    def get_port_of_controllino(self):
+        if(self.controllino_port_is_available == False):
+            print('---------------------------------------------')
+            print('TRY TO FIND CONTROLLINO PORT BY IDS:')
+            # USB-Serial-Converter @ Controllino TX1/RX1
+            self.controllino_port = self.get_port_by_ids(
+                self.usb_serial_converter_vid,
+                self.usb_serial_converter_pid)
+            if(self.controllino_port):
+                self.controllino_port_is_available = True
+                print(f'CONTROLLINO PORT: {self.controllino_port}')
+            else:
+                print('CONTROLLINO PORT NOT AVAILABLE')
+                self.reset_controllino_connection
+            print('---------------------------------------------')
 
     def get_port_connection(self, port):
         try:
@@ -95,22 +130,37 @@ class log_manager():
             return port_connection
 
         except Exception as error:
-            error_message = 'CAUGHT AN ERROR WHILE TRYING TO GET PORT CONNECTION !!!'
+            error_message = 'CAUGHT AN ERROR WHILE TRYING TO GET PORT CONNECTION'
             print(error_message, error)
 
-    def connect_to_serial_devices(self):
-        try:
+    def connect_to_arduino(self):
+        if(self.arduino_port_is_available == True and self.arduino_port_is_connected == False):
+            print('---------------------------------------------')
+            print('TRY TO CONNECT ARDUINO:')
+            try:
+                self.arduino_serial = self.get_port_connection(self.arduino_port)
+                print("CONNECTED TO: " + self.arduino_serial.portstr)
+                self.arduino_port_is_connected = True
+            except Exception as error:
+                error_message = 'CAUGHT AN ERROR WHILE TRYING TO CONNECT TO ARDUINO'
+                self.reset_arduino_connection()
+                print(error_message, error)
+            print('---------------------------------------------')
+
+    def connect_to_controllino(self):
+        if(self.controllino_port_is_available == True and self.controllino_port_is_connected == False):
             print('---------------------------------------------')
             print('TRY TO CONNECT TO CONTROLLINO:')
-            self.controllino_serial = self.get_port_connection(self.controllino_port)
-            print("connected to: " + self.controllino_serial.portstr)
+            try:
+                self.controllino_serial = self.get_port_connection(self.controllino_port)
+                print("CONNECTED TO: " + self.controllino_serial.portstr)
+                self.controllino_port_is_connected = True
 
-            print('TRY TO CONNECT ARDUINO:')
-            self.arduino_serial = self.get_port_connection(self.arduino_port)
-            print("connected to: " + self.arduino_serial.portstr)
-        except Exception as error:
-            error_message = 'CAUGHT AN ERROR WHILE TRYING TO CONNECT TO PORT !!!'
-            print(error_message, error)
+            except Exception as error:
+                error_message = 'CAUGHT AN ERROR WHILE TRYING TO CONNECT TO CONTROLLINO'
+                print(error_message, error)
+                self.reset_controllino_connection()
+            print('---------------------------------------------')
 
     def process_serial_read(self, readline):
         readline = readline.decode('utf-8')
@@ -169,30 +219,51 @@ class log_manager():
             if(self.log_object.tool_is_crimping):
                 self.log_object.crimp_current = readline[2]
 
-    def read_serial_ports(self):
-        log_manager.process_serial_read(self.controllino_serial.readline())
-        log_manager.process_serial_read(self.arduino_serial.readline())
+    def read_arduino_serial(self):
+        if(self.arduino_serial):
+            try:
+                log_manager.process_serial_read(self.arduino_serial.readline())
+            except Exception as error:
+                error_message = 'CAUGHT AN ERROR WHILE TRYING TO READ ARDUINO SERIAL'
+                print(error_message, error)
+                self.reset_arduino_connection()
+
+    def read_controllino_serial(self):
+        if(self.controllino_serial):
+            try:
+                log_manager.process_serial_read(self.controllino_serial.readline())
+            except Exception as error:
+                error_message = 'CAUGHT AN ERROR WHILE TRYING TO READ CONTROLLINO SERIAL'
+                print(error_message, error)
+                self.reset_controllino_connection()
+
 
 if __name__ == '__main__':
 
     log_manager = log_manager()
 
     log_manager.get_list_of_serial_devices()
-    log_manager.get_ports_of_devices()
-    log_manager.connect_to_serial_devices()
+
+    time.sleep(3)
 
     while True:
 
         try:
-            # Read and process serial inputs:
-            log_manager.read_serial_ports()
+            # FIND PORTS
+            log_manager.get_port_of_arduino()
+            log_manager.get_port_of_controllino()
+
+            # ESTABLISH CONNECTION
+            log_manager.connect_to_arduino()
+            log_manager.connect_to_controllino()
+
+            # READ AND PROCESS
+            log_manager.read_arduino_serial()
+            log_manager.read_controllino_serial()
+
         except Exception as error:
-            error_message = 'CAUGHT AN ERROR IN THE MAIN LOOP !!!'
+            error_message = 'CAUGHT AN ERROR IN THE MAIN LOOP, THIS SHOULD NOT HAPPEN !!!'
             print(error_message, error)
-            log_manager.get_list_of_serial_devices()
-            log_manager.get_ports_of_devices()
-            log_manager.connect_to_serial_devices()
-            time.sleep(3)
 
         time.sleep(0.5)
 
