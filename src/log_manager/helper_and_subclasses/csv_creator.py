@@ -5,6 +5,8 @@ import getpass
 from logging import log
 from helper_and_subclasses.firebase_helper import firebase_helper
 from datetime import datetime
+import os
+
 
 import time
 
@@ -14,6 +16,23 @@ class csv_creator():
         self.firebase_helper=firebase_helper()
         return
 
+    def get_user_path(self):
+        return os.environ['USERPROFILE']
+    
+    def get_filepath(self):
+        csv_folderpath=self.get_user_path()+"/AppData/Roaming/SeallessLog/"
+        
+        # Create folder if not exists:
+        try:
+            os.makedirs(csv_folderpath)
+            print('VERZEICHNIS ERSTELLT')
+        except:
+            print('VERZEICHNIS BEREITS VORHANDEN')
+        
+        csv_filepath=csv_folderpath+'logs.csv'
+        return csv_filepath
+
+
     def create_csv(self):
         print()
         print('INITIALIZE DB CONNECTION ...')
@@ -22,6 +41,8 @@ class csv_creator():
         print('GET LOGS FROM DB ...')
         time.sleep(1.5)
         print('--------------------------------------------------------------------------------')
+        
+        # Get log data from firebase
         logs = self.firebase_helper.get_logs()
 
         timestamp=datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -60,7 +81,8 @@ class csv_creator():
         # Create CSV from list
         print('--------------------------------------------------------------------------------')
         print('CREATE CSV ...')
-        with open('logs.csv', 'w', newline='') as file:
+
+        with open(self.get_filepath(), 'w', newline='') as file:
             csv.writer(file, delimiter=';').writerows(log_list)
         time.sleep(2)
         print('CSV CREATED')
@@ -68,5 +90,5 @@ class csv_creator():
         
 if __name__ == '__main__':
     csv_creator=csv_creator()
-    csv_creator.create_csv()
+    csv_creator.create_csv()    
     
