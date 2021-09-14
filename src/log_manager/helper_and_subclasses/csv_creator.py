@@ -22,6 +22,8 @@ class csv_creator():
         print('GET LOGS FROM DB ...')
         time.sleep(1.5)
         print('--------------------------------------------------------------------------------')
+        
+        # Get log data from firebase
         logs = self.firebase_helper.get_logs()
 
         timestamp=datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -60,7 +62,8 @@ class csv_creator():
         # Create CSV from list
         print('--------------------------------------------------------------------------------')
         print('CREATE CSV ...')
-        with open('logs.csv', 'w', newline='') as file:
+        csv_directory="C:/Users/michael.wettstein/AppData/Roaming/"
+        with open(csv_directory+'logs.csv', 'w', newline='') as file:
             csv.writer(file, delimiter=';').writerows(log_list)
         time.sleep(2)
         print('CSV CREATED')
@@ -68,5 +71,5 @@ class csv_creator():
         
 if __name__ == '__main__':
     csv_creator=csv_creator()
-    csv_creator.create_csv()
+    csv_creator.create_csv()    
     
