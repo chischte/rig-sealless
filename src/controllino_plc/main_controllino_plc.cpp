@@ -825,7 +825,7 @@ class Nachklemme_auf : public Cycle_step {
 class Auswerfen : public Cycle_step {
   String get_display_text() { return "AUSWERFEN"; }
 
-  void do_initial_stuff() {}
+  void do_initial_stuff() { cylinder_wippenhebel.set(1); }
   void do_loop_stuff() {
     cylinder_auswerfer.stroke(1500, 100);
     if (cylinder_auswerfer.stroke_completed()) {
@@ -916,6 +916,21 @@ class Foerderzylinder_zurueck : public Cycle_step {
   }
 };
 
+// WIPPENHEBEL SCHLIESSEN
+class Tool_wippe_zu : public Cycle_step {
+  String get_display_text() { return "WIPPE ZU"; }
+
+  void do_initial_stuff() {
+    cylinder_wippenhebel.set(0);
+    cycle_step_delay.set_unstarted();
+  }
+  void do_loop_stuff() {
+    if (cycle_step_delay.delay_time_is_up(500)) {
+      set_loop_completed();
+    }
+  }
+};
+
 // GERÄT SPANNEN
 class Tool_spannen : public Cycle_step {
   String get_display_text() { return "TOOL SPANNEN"; }
@@ -962,8 +977,8 @@ class Tool_crimp : public Cycle_step {
   }
 };
 
-// WIPPENHEBEL BETÄTIGEN UND LÖSEN
-class Tool_wippenhebel : public Cycle_step {
+// WIPPENHEBEL BETÄTIGEN
+class Tool_wippe_auf : public Cycle_step {
   String get_display_text() { return "TOOL WIPPENHEBEL"; }
 
   void do_initial_stuff() {
@@ -971,13 +986,9 @@ class Tool_wippenhebel : public Cycle_step {
     send_log_cycle_reset(counter.get_value(shorttime_counter));
     counter.count_one_up(longtime_counter);
     send_log_cycle_total(counter.get_value(longtime_counter));
+    cylinder_wippenhebel.set(1);
   }
-  void do_loop_stuff() {
-    cylinder_wippenhebel.stroke(2000, 0);
-    if (cylinder_wippenhebel.stroke_completed()) {
-      set_loop_completed();
-    }
-  }
+  void do_loop_stuff() { set_loop_completed(); }
 };
 
 //------------------------------------------------------------------------------
@@ -1054,7 +1065,7 @@ void setup() {
 
   //------------------------------------------------
   // PUSH THE CYCLE STEPS INTO THE VECTOR CONTAINER:
-  // PUSH SEQUENCE = CYCLE SEQUENCE!
+  // PUSH SEQUENCE = CYCLE SEQUENCE !
   main_cycle_steps.push_back(new Luft_ablassen);
   main_cycle_steps.push_back(new Vorklemme_auf);
   main_cycle_steps.push_back(new Schlitten_zurueck);
@@ -1066,10 +1077,11 @@ void setup() {
   main_cycle_steps.push_back(new Schneiden);
   main_cycle_steps.push_back(new Foerdereinheit_auf);
   main_cycle_steps.push_back(new Foerderzylinder_zurueck);
+  main_cycle_steps.push_back(new Tool_wippe_zu);
   main_cycle_steps.push_back(new Tool_spannen);
   main_cycle_steps.push_back(new Nachklemme_zu);
   main_cycle_steps.push_back(new Tool_crimp);
-  main_cycle_steps.push_back(new Tool_wippenhebel);
+  main_cycle_steps.push_back(new Tool_wippe_auf);
   //------------------------------------------------
   // CONFIGURE THE STATE CONTROLLER:
   int no_of_main_cycle_steps = main_cycle_steps.size();
