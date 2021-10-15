@@ -7,8 +7,11 @@
 const byte CURRENT_CLAMP_IN = A0;
 
 // OUTPUT / POWER SUPPLY:
-const byte CLAMP_POWER_PIN1 = A3;
-const byte CLAMP_POWER_PIN2 = A4;
+const byte CLAMP_POWER_PIN1 = A1;
+const byte CLAMP_POWER_PIN2 = A2;
+const byte CLAMP_POWER_PIN3 = A3;
+const byte CLAMP_POWER_PIN4 = A4;
+const byte CLAMP_POWER_PIN5 = A5;
 
 // CREATE OBJECTS
 Insomnia status_print_delay;
@@ -50,15 +53,13 @@ bool current_is_over_threshold(float current) {
 // auto power off
 // Two output pins are used to draw less current per pin
 // Port commands are used to switch the pins simultaneously
-// PIN A3 = PORT C BIT 3
-// PIN A4 = PORT C BIT 4
 
 void switch_clamp_power_on() {
-  PORTC = PORTC | 0b00011000; // set bit 3 and 4 high, leave rest alone
+  PORTC = PORTC | 0b00111110; // set bits 1-5 high, leave rest alone
 }
 
 void switch_clamp_power_off() {
-  PORTC = PORTC & 0b11100111; // clear bit 3 and 4, leave rest alone
+  PORTC = PORTC & 0b11000001; // clear bits 1-5, leave rest alone
 }
 
 void reset_current_clamp() {
@@ -111,6 +112,9 @@ void log_max_current() {
 void setup() {
   pinMode(CLAMP_POWER_PIN1, OUTPUT);
   pinMode(CLAMP_POWER_PIN2, OUTPUT);
+  pinMode(CLAMP_POWER_PIN3, OUTPUT);
+  pinMode(CLAMP_POWER_PIN4, OUTPUT);
+  pinMode(CLAMP_POWER_PIN5, OUTPUT);
   switch_clamp_power_on();
 
   Serial.begin(115200);
