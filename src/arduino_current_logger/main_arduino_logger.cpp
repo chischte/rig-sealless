@@ -31,8 +31,8 @@ void print_device_status() {
 }
 
 bool current_is_over_threshold(float current) {
-  const float cycle_start_threshold = 15.0; // [A]
-  const float cycle_stop_threshold = 10.0; //  [A]
+  const float cycle_start_threshold = 6.0; // [A]
+  const float cycle_stop_threshold = 2.0; //  [A]
   static bool current_is_over_threshold = false;
 
   if (current > cycle_start_threshold) {
@@ -127,6 +127,6 @@ void loop() {
 
   monitor_current_clamp_timeout();
   delay(5); // reduce number of measurments
-  
+
   //Serial.println(get_amps_from_clamp(), 2); // For debug and calibration
 }
