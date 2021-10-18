@@ -28,8 +28,12 @@ float get_amps_from_clamp() {
 }
 
 void print_device_status() {
-  if (status_print_delay.delay_time_is_up(3000)) {
-    Serial.println("LOG;CURRENT_LOGGER_RUNNING;");
+  if (status_print_delay.delay_time_is_up(5000)) {
+    float current = get_amps_from_clamp();
+    String status_string = "LOG;CURRENT_LOGGER_RUNNING;";
+    status_string += current;
+    status_string += ";";
+    Serial.println(status_string);
   }
 }
 
@@ -51,7 +55,7 @@ bool current_is_over_threshold(float current) {
 // MANAGE CLAMP POWER SUPPLY ---------------------------------------------------
 // The clamp tool has to be switched off and on every few minutes to prevent
 // auto power off
-// Two output pins are used to draw less current per pin
+// Five output pins are used to draw less current per pin
 // Port commands are used to switch the pins simultaneously
 
 void switch_clamp_power_on() {
@@ -69,11 +73,10 @@ void reset_current_clamp() {
 }
 
 void monitor_current_clamp_timeout() {
-  // Reset current clamp if timeout timed out and
-  // tool is not measuring current.
+  // Reset current clamp if timeout timed out and tool is not measuring current.
 
   if (current_clamp_reset_timeout.has_timed_out()) {
-    if (current_is_over_threshold(get_amps_from_clamp())) {
+    if (!current_is_over_threshold(get_amps_from_clamp())) {
       reset_current_clamp();
       current_clamp_reset_timeout.reset_time();
     }
@@ -95,12 +98,16 @@ void log_max_current() {
 
   float current = get_amps_from_clamp();
 
+  // Store measurements:
   if (current_is_over_threshold(current)) {
+    // Store first measurement:
     if (isnan(currents_median_cache.getLowest())) {
       currents_median_cache.add(current);
+      // Store bigger values:
     } else if (current > currents_median_cache.getLowest()) {
       currents_median_cache.add(current);
     }
+    // Log current and clear all values after tool-cycle is completed:
   } else if (currents_median_cache.getCount() > 0) {
     log_current(currents_median_cache.getMedian());
     currents_median_cache.clear(); // Sets current-count to 0 and values to nans
@@ -130,6 +137,7 @@ void loop() {
   print_device_status();
 
   monitor_current_clamp_timeout();
+
   delay(5); // reduce number of measurments
 
   //Serial.println(get_amps_from_clamp(), 2); // For debug and calibration
