@@ -88,7 +88,7 @@ const byte TRENNRELAIS_ZYLINDER_2 = CONTROLLINO_R5; // turn off >=100ms before l
 const byte FOERDERZYLINDER_MOVE_IN = CONTROLLINO_D9; // GREY
 const byte FOERDERZYLINDER_MOVE_OUT = CONTROLLINO_D10; // PINK
 Cylinder cylinder_schlittenzuluft(CONTROLLINO_D4);
-Cylinder cylinder_schlittenabluft(CONTROLLINO_D7);
+Cylinder cylinder_schlittenabluft(CONTROLLINO_R8);
 Cylinder cylinder_auswerfer(CONTROLLINO_D3);
 Cylinder cylinder_vorklemme(CONTROLLINO_D23);
 Cylinder cylinder_spanntaste(CONTROLLINO_D5);
