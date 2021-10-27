@@ -71,13 +71,15 @@ EEPROM_Counter counter;
 State_controller state_controller;
 
 // INPUT PINS:
-const byte PRESSURE_SENSOR_PIN = CONTROLLINO_A15;
-Debounce sensor_sledge_startposition(CONTROLLINO_A15);
-Debounce sensor_sledge_endposition(CONTROLLINO_A15);
+const byte PRESSURE_SENSOR_PIN = CONTROLLINO_A3;
+Debounce sensor_sledge_startposition(CONTROLLINO_A4);
+Debounce sensor_sledge_endposition(CONTROLLINO_A5);
 Debounce sensor_foerderzylinder_in(CONTROLLINO_A7); // BROWN
 Debounce sensor_foerderzylinder_out(CONTROLLINO_A6); // GREEN
 Debounce emergency_stop_signal(CONTROLLINO_A10); //
 Debounce email_button(CONTROLLINO_A0); //
+// Bandsensor oben
+// Bansensor unten
 
 // OUTPUT PINS:
 const byte FOERDERZYLINDER_LOGIC_POWER_RELAY = CONTROLLINO_R6; // WHITE // turn on >=50ms after start of "load voltage"
@@ -85,16 +87,16 @@ const byte TRENNRELAIS_ZYLINDER_1 = CONTROLLINO_R4; // turn off >=100ms before l
 const byte TRENNRELAIS_ZYLINDER_2 = CONTROLLINO_R5; // turn off >=100ms before logic power off
 const byte FOERDERZYLINDER_MOVE_IN = CONTROLLINO_D9; // GREY
 const byte FOERDERZYLINDER_MOVE_OUT = CONTROLLINO_D10; // PINK
-Cylinder cylinder_schlittenzuluft(CONTROLLINO_D23);
-Cylinder cylinder_schlittenabluft(CONTROLLINO_D23);
-Cylinder cylinder_auswerfer(CONTROLLINO_D23);
+Cylinder cylinder_schlittenzuluft(CONTROLLINO_D4);
+Cylinder cylinder_schlittenabluft(CONTROLLINO_D7);
+Cylinder cylinder_auswerfer(CONTROLLINO_D3);
 Cylinder cylinder_vorklemme(CONTROLLINO_D23);
-Cylinder cylinder_spanntaste(CONTROLLINO_D23);
-Cylinder cylinder_crimptaste(CONTROLLINO_D23);
-Cylinder cylinder_wippenhebel(CONTROLLINO_D23);
+Cylinder cylinder_spanntaste(CONTROLLINO_D5);
+Cylinder cylinder_crimptaste(CONTROLLINO_D2);
+Cylinder cylinder_wippenhebel(CONTROLLINO_D0);
 Cylinder cylinder_nachklemme(CONTROLLINO_D23);
-Cylinder cylinder_vorschubklemme(CONTROLLINO_D23);
-Cylinder cylinder_messer(CONTROLLINO_D23);
+Cylinder cylinder_vorschubklemme(CONTROLLINO_D6);
+Cylinder cylinder_messer(CONTROLLINO_D1);
 
 Insomnia nex_reset_button_timeout(10000); // pushtime to reset counter
 Insomnia print_interval_timeout(1000);
