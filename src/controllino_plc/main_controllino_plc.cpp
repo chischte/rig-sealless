@@ -90,11 +90,12 @@ const byte FOERDERZYLINDER_MOVE_OUT = CONTROLLINO_D10; // PINK
 Cylinder cylinder_schlittenzuluft(CONTROLLINO_D4);
 Cylinder cylinder_schlittenabluft(CONTROLLINO_R8);
 Cylinder cylinder_auswerfer(CONTROLLINO_D3);
-Cylinder cylinder_vorklemme(CONTROLLINO_D23);
 Cylinder cylinder_spanntaste(CONTROLLINO_D5);
 Cylinder cylinder_crimptaste(CONTROLLINO_D2);
 Cylinder cylinder_wippenhebel(CONTROLLINO_D0);
-Cylinder cylinder_nachklemme(CONTROLLINO_D23);
+Cylinder cylinder_hydraulik_pressure(CONTROLLINO_D7);
+Cylinder cylinder_vorklemme(CONTROLLINO_D15);
+Cylinder cylinder_nachklemme(CONTROLLINO_D14);
 Cylinder cylinder_vorschubklemme(CONTROLLINO_D6);
 Cylinder cylinder_messer(CONTROLLINO_D1);
 
@@ -1044,11 +1045,13 @@ void monitor_emergency_signal() {
 
   if (emergency_stop_signal.switched_low()) { // re start
     power_on_electrocylinder();
+    cylinder_hydraulik_pressure.set(1);
   }
 
   if (emergency_stop_signal.switched_high()) { // emergency stop
     // SETUP PIN MODES:
     power_off_electrocylinder();
+    cylinder_hydraulik_pressure.set(0);
     reset_machine();
   }
 }
@@ -1103,6 +1106,7 @@ void setup() {
 
   if (!emergency_stop_signal.get_button_state()) { // emergency stop not activated
     power_on_electrocylinder();
+    cylinder_hydraulik_pressure.set(1);
   }
   Serial.println("EXIT SETUP");
 }
