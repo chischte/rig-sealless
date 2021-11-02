@@ -911,9 +911,15 @@ class Foerdereinheit_auf : public Cycle_step {
 class Foerderzylinder_zurueck : public Cycle_step {
   String get_display_text() { return "FOERDERER ZURUECK"; }
 
-  void do_initial_stuff() { foerderzylinder_ausfahren(); }
+  void do_initial_stuff() {
+    foerderzylinder_ausfahren();
+    cycle_step_delay.set_unstarted();
+  }
   void do_loop_stuff() {
-    if (sensor_foerderzylinder_out.switched_high()) {
+    // if (sensor_foerderzylinder_out.switched_high()) {
+    //   set_loop_completed();
+    // }
+    if (cycle_step_delay.delay_time_is_up(700)) {
       set_loop_completed();
     }
   }
@@ -937,17 +943,29 @@ class Tool_wippe_zu : public Cycle_step {
 // GERÄT SPANNEN
 class Tool_spannen : public Cycle_step {
   String get_display_text() { return "TOOL SPANNEN"; }
+  bool has_reached_sensor = false;
 
   void do_initial_stuff() {
+    has_reached_sensor=false;
     send_log_start_tensioning();
     block_sledge();
     cylinder_spanntaste.set(1);
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    if (cycle_step_delay.delay_time_is_up(4000)) {
-      cylinder_spanntaste.set(0);
-      set_loop_completed();
+    // if (cycle_step_delay.delay_time_is_up(4000)) {
+    //   cylinder_spanntaste.set(0);
+    //   set_loop_completed();
+    // }
+    if (sensor_sledge_endposition.switched_high()) {
+      has_reached_sensor = true;
+    }
+
+    if (has_reached_sensor) {
+      if (cycle_step_delay.delay_time_is_up(1000)) {
+        cylinder_spanntaste.set(0);
+        set_loop_completed();
+      }
     }
   }
 };
@@ -1067,6 +1085,8 @@ void setup() {
   pinMode(FOERDERZYLINDER_LOGIC_POWER_RELAY, OUTPUT);
   pinMode(FOERDERZYLINDER_MOVE_IN, OUTPUT);
   pinMode(FOERDERZYLINDER_MOVE_OUT, OUTPUT);
+  // sensor_sledge_startposition.set_debounce_time(100);
+  // sensor_sledge_endposition.set_debounce_time(100);
 
   //------------------------------------------------
   // PUSH THE CYCLE STEPS INTO THE VECTOR CONTAINER:
