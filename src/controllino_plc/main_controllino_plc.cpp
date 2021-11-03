@@ -800,12 +800,10 @@ class Schlitten_zurueck : public Cycle_step {
 
   void do_initial_stuff() { move_sledge(); }
   void do_loop_stuff() {
-    // if (sensor_sledge_startposition.switched_high()) {
-    //   vent_sledge();
-    set_loop_completed();
-    // }
-    vent_sledge();
-    set_loop_completed();
+    if (sensor_sledge_startposition.get_button_state()) {
+      vent_sledge();
+      set_loop_completed();
+    }
   }
 };
 
@@ -946,7 +944,7 @@ class Tool_spannen : public Cycle_step {
   bool has_reached_sensor = false;
 
   void do_initial_stuff() {
-    has_reached_sensor=false;
+    has_reached_sensor = false;
     send_log_start_tensioning();
     block_sledge();
     cylinder_spanntaste.set(1);
@@ -1169,7 +1167,7 @@ void run_step_or_auto_mode() {
   }
 
   // MONITOR "MACHINE STOPPED ERROR TIMEOUT":
-  if (state_controller.machine_is_running()) {
+  if (state_controller.machine_is_running() && state_controller.is_in_auto_mode()) {
     monitor_machine_stopped_error_timeout();
   }
 
