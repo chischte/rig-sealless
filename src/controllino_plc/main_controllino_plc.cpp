@@ -149,10 +149,12 @@ NexButton button_reset_cycle = NexButton(1, 5, "b0");
 NexDSButton switch_play_pause = NexDSButton(1, 3, "bt0");
 NexDSButton switch_step_auto_mode = NexDSButton(1, 4, "bt1");
 // PAGE 1 - RIGHT SIDE ---------------------------------------------------------
-NexButton button_spanntaste = NexButton(1, 9, "b4");
-NexButton button_crimptaste = NexButton(1, 8, "b3");
+// NexButton button_spanntaste = NexButton(1, 9, "b4");
+// NexButton button_crimptaste = NexButton(1, 8, "b3");
 NexButton button_schneiden = NexButton(1, 14, "b5");
 NexButton button_schlitten = NexButton(1, 1, "b6");
+NexDSButton switch_vorklemme = NexDSButton(1, 16, "bt2");
+NexDSButton switch_nachklemme = NexDSButton(1, 17, "bt4");
 NexDSButton switch_wippenhebel = NexDSButton(1, 10, "bt5");
 NexDSButton switch_entlueften = NexDSButton(1, 13, "bt3");
 // PAGE 2 - LEFT SIDE ----------------------------------------------------------
@@ -174,8 +176,7 @@ NexTouch *nex_listen_list[] = { //
     &nex_page_1, &button_previous_step, &button_next_step, &button_reset_cycle, &switch_play_pause,
     &switch_step_auto_mode,
     // PAGE 1 RIGHT:
-    &button_schneiden, &switch_wippenhebel, &switch_entlueften, &button_schlitten, &button_spanntaste,
-    &button_crimptaste,
+    &button_schneiden, &switch_vorklemme,&switch_nachklemme,&switch_wippenhebel, &switch_entlueften, &button_schlitten,
     // PAGE 2 LEFT:
     &nex_page_2, &button_slider_1_left, &button_slider_1_right, &nex_page_2, &button_slider_2_left,
     &button_slider_2_right,
@@ -187,8 +188,10 @@ NexTouch *nex_listen_list[] = { //
 // VARIABLES TO MONITOR NEXTION DISPLAY STATES *********************************
 
 bool nex_state_schlittenabluft;
-bool nex_state_spanntaste;
-bool nex_state_crimptaste;
+// bool nex_state_spanntaste;
+// bool nex_state_crimptaste;
+bool nex_state_vorklemme;
+bool nex_state_nachklemme;
 bool nex_state_wippenhebel;
 bool nex_state_schlittenzuluft;
 bool nex_state_messer;
@@ -456,18 +459,26 @@ void switch_wippenhebel_push(void *ptr) {
   cylinder_wippenhebel.toggle();
   nex_state_wippenhebel = !nex_state_wippenhebel;
 }
-void button_spanntaste_push(void *ptr) { //
-  cylinder_spanntaste.set(1);
+void switch_vorklemme_push(void *ptr) {
+  cylinder_vorklemme.toggle();
+  nex_state_vorklemme = !nex_state_vorklemme;
 }
-void button_spanntaste_pop(void *ptr) { //
-  cylinder_spanntaste.set(0);
+void switch_nachklemme_push(void *ptr) {
+  cylinder_nachklemme.toggle();
+  nex_state_nachklemme = !nex_state_nachklemme;
 }
-void button_crimptaste_push(void *ptr) { //
-  cylinder_crimptaste.set(1);
-}
-void button_crimptaste_pop(void *ptr) { //
-  cylinder_crimptaste.set(0);
-}
+// void button_spanntaste_push(void *ptr) { //
+//   cylinder_spanntaste.set(1);
+// }
+// void button_spanntaste_pop(void *ptr) { //
+//   cylinder_spanntaste.set(0);
+// }
+// void button_crimptaste_push(void *ptr) { //
+//   cylinder_crimptaste.set(1);
+// }
+// void button_crimptaste_pop(void *ptr) { //
+//   cylinder_crimptaste.set(0);
+// }
 void switch_entlueften_push(void *ptr) {
   cylinder_schlittenabluft.toggle();
   nex_state_schlittenabluft = !nex_state_schlittenabluft;
@@ -533,10 +544,10 @@ void page_1_push(void *ptr) {
   nex_state_step_mode = true;
   nex_state_schlittenabluft = 1;
   nex_state_wippenhebel = 0;
-  nex_state_spanntaste = 0;
+  nex_state_vorklemme = 0;
+  nex_state_nachklemme = 0;
   nex_state_schlittenzuluft = 0;
   nex_state_messer = 0;
-  nex_state_crimptaste = 0;
   nex_state_machine_running = 0;
 }
 void page_2_push(void *ptr) {
@@ -564,13 +575,11 @@ void attach_push_and_pop() {
   button_next_step.attachPush(button_next_step_push);
   switch_play_pause.attachPush(switch_play_pause_push);
   switch_step_auto_mode.attachPush(switch_step_auto_mode_push);
+  switch_vorklemme.attachPush(switch_vorklemme_push);
+  switch_nachklemme.attachPush(switch_nachklemme_push);
   switch_wippenhebel.attachPush(switch_wippenhebel_push);
   switch_entlueften.attachPush(switch_entlueften_push);
   // PAGE 1 PUSH AND POP:
-  button_spanntaste.attachPush(button_spanntaste_push);
-  button_spanntaste.attachPop(button_spanntaste_pop);
-  button_crimptaste.attachPush(button_crimptaste_push);
-  button_crimptaste.attachPop(button_crimptaste_pop);
   button_schneiden.attachPush(button_schneiden_push);
   button_schneiden.attachPop(button_schneiden_pop);
   button_schlitten.attachPush(button_schlitten_push);
@@ -674,6 +683,14 @@ void display_loop_page_1_right_side() {
     toggle_ds_switch("bt5");
     nex_state_wippenhebel = !nex_state_wippenhebel;
   }
+    if (cylinder_vorklemme.get_state() != nex_state_vorklemme) {
+    toggle_ds_switch("bt2");
+    nex_state_vorklemme = !nex_state_vorklemme;
+  }
+      if (cylinder_nachklemme.get_state() != nex_state_nachklemme) {
+    toggle_ds_switch("bt4");
+    nex_state_nachklemme = !nex_state_nachklemme;
+  }
 
   // UPDATE BUTTONS:
   if (cylinder_schlittenzuluft.get_state() != nex_state_schlittenzuluft) {
@@ -682,24 +699,14 @@ void display_loop_page_1_right_side() {
     set_momentary_button_high_or_low(button, state);
     nex_state_schlittenzuluft = cylinder_schlittenzuluft.get_state();
   }
-  if (cylinder_spanntaste.get_state() != nex_state_spanntaste) {
-    bool state = cylinder_spanntaste.get_state();
-    String button = "b4";
-    set_momentary_button_high_or_low(button, state);
-    nex_state_spanntaste = cylinder_spanntaste.get_state();
-  }
+ 
   if (cylinder_messer.get_state() != nex_state_messer) {
     bool state = cylinder_messer.get_state();
     String button = "b5";
     set_momentary_button_high_or_low(button, state);
     nex_state_messer = cylinder_messer.get_state();
   }
-  if (cylinder_crimptaste.get_state() != nex_state_crimptaste) {
-    bool state = cylinder_crimptaste.get_state();
-    String button = "b3";
-    set_momentary_button_high_or_low(button, state);
-    nex_state_crimptaste = cylinder_crimptaste.get_state();
-  }
+  
 }
 
 // DIPLAY LOOP PAGE 2 LEFT SIDE: -----------------------------------------------
