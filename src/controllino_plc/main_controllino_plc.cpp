@@ -1076,7 +1076,7 @@ void monitor_emergency_signal() {
   if (emergency_stop_signal.switched_high()) {
     reset_machine();
     power_off_electrocylinder();
-    delay(500); // wait for hydraulic cylinders to move back
+    delay(1500); // wait for hydraulic cylinders to move back
     cylinder_hydraulik_pressure.set(0);
   }
 }
