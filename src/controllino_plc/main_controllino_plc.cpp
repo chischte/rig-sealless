@@ -238,8 +238,8 @@ void reset_machine() {
   clear_text_field("t4");
   hide_info_field();
   state_controller.set_step_mode();
-  state_controller.set_current_step_to(0);
   reset_flag_of_current_step();
+  state_controller.set_current_step_to(0);
   state_controller.set_reset_mode(false);
 }
 
@@ -1066,16 +1066,18 @@ void power_off_electrocylinder() {
 
 void monitor_emergency_signal() {
 
-  if (emergency_stop_signal.switched_low()) { // re start
+  // (RE-)START SYSTEM
+  if (emergency_stop_signal.switched_low()) { 
     power_on_electrocylinder();
     cylinder_hydraulik_pressure.set(1);
   }
 
-  if (emergency_stop_signal.switched_high()) { // emergency stop
-    // SETUP PIN MODES:
-    power_off_electrocylinder();
-    cylinder_hydraulik_pressure.set(0);
+  // STOP SYSTEM
+  if (emergency_stop_signal.switched_high()) {
     reset_machine();
+    power_off_electrocylinder();
+    delay(500); // wait for hydraulic cylinders to move back
+    cylinder_hydraulik_pressure.set(0);
   }
 }
 
