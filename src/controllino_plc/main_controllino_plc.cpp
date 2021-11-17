@@ -212,6 +212,23 @@ std::vector<Cycle_step *> main_cycle_steps;
 
 // NON NEXTION FUNCTIONS *******************************************************
 
+void reset_flag_of_current_step() { main_cycle_steps[state_controller.get_current_step()]->reset_flags(); }
+
+void foerderzylinder_zurueck() {
+  digitalWrite(FOERDERZYLINDER_MOVE_OUT, HIGH);
+  digitalWrite(FOERDERZYLINDER_MOVE_IN, LOW);
+}
+
+void foerderzylinder_foerdern() {
+  digitalWrite(FOERDERZYLINDER_MOVE_OUT, LOW);
+  digitalWrite(FOERDERZYLINDER_MOVE_IN, HIGH);
+}
+
+void vent_sledge() {
+  cylinder_schlittenzuluft.set(0);
+  cylinder_schlittenabluft.set(0);
+}
+
 void set_initial_cylinder_states() {
   cylinder_messer.set(0);
   cylinder_nachklemme.set(0);
@@ -222,9 +239,8 @@ void set_initial_cylinder_states() {
   cylinder_vorschubklemme.set(0);
   cylinder_vorklemme.set(0);
   cylinder_crimptaste.set(0);
+  foerderzylinder_zurueck();
 }
-
-void reset_flag_of_current_step() { main_cycle_steps[state_controller.get_current_step()]->reset_flags(); }
 
 void stop_machine() {
   set_initial_cylinder_states();
@@ -264,21 +280,6 @@ void move_sledge() {
 void block_sledge() {
   cylinder_schlittenzuluft.set(0);
   cylinder_schlittenabluft.set(1);
-}
-
-void foerderzylinder_ausfahren() {
-  digitalWrite(FOERDERZYLINDER_MOVE_OUT, HIGH);
-  digitalWrite(FOERDERZYLINDER_MOVE_IN, LOW);
-}
-
-void foerderzylinder_zurueckfahren() {
-  digitalWrite(FOERDERZYLINDER_MOVE_OUT, LOW);
-  digitalWrite(FOERDERZYLINDER_MOVE_IN, HIGH);
-}
-
-void vent_sledge() {
-  cylinder_schlittenzuluft.set(0);
-  cylinder_schlittenabluft.set(0);
 }
 
 void display_force(int force) {
@@ -827,7 +828,7 @@ class Nachklemme_auf : public Cycle_step {
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    if (cycle_step_delay.delay_time_is_up(200)) {
+    if (cycle_step_delay.delay_time_is_up(10)) {
       set_loop_completed();
     }
   }
@@ -839,7 +840,7 @@ class Auswerfen : public Cycle_step {
 
   void do_initial_stuff() { cylinder_wippenhebel.set(1); }
   void do_loop_stuff() {
-    cylinder_auswerfer.stroke(1300, 100);
+    cylinder_auswerfer.stroke(1300, 10);
     if (cylinder_auswerfer.stroke_completed()) {
       set_loop_completed();
     }
@@ -865,7 +866,7 @@ class Foerderklemme_zu : public Cycle_step {
 class Foerdern : public Cycle_step {
   String get_display_text() { return "FOERDERN"; }
 
-  void do_initial_stuff() { foerderzylinder_zurueckfahren(); }
+  void do_initial_stuff() { foerderzylinder_foerdern(); }
   void do_loop_stuff() {
     if (sensor_foerderzylinder_in.switched_high()) {
       set_loop_completed();
@@ -882,20 +883,23 @@ class Vorklemme_zu : public Cycle_step {
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    if (cycle_step_delay.delay_time_is_up(200)) {
+    if (cycle_step_delay.delay_time_is_up(10)) {
       set_loop_completed();
     }
   }
 };
 
-// SCHNEIDEN
-class Schneiden : public Cycle_step {
-  String get_display_text() { return "SCHNEIDEN"; }
+// MESSER AB
+class Messer_ab : public Cycle_step {
+  String get_display_text() { return "MESSER AB"; }
 
-  void do_initial_stuff() { vent_sledge(); }
+  void do_initial_stuff() {
+    vent_sledge();
+    cycle_step_delay.set_unstarted();
+  }
   void do_loop_stuff() {
-    cylinder_messer.stroke(1300, 1000);
-    if (cylinder_messer.stroke_completed()) {
+    cylinder_messer.set(1);
+    if (cycle_step_delay.delay_time_is_up(500)) {
       set_loop_completed();
     }
   }
@@ -921,7 +925,7 @@ class Foerderzylinder_zurueck : public Cycle_step {
   String get_display_text() { return "FOERDERER ZURUECK"; }
 
   void do_initial_stuff() {
-    foerderzylinder_ausfahren();
+    foerderzylinder_zurueck();
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
@@ -929,6 +933,22 @@ class Foerderzylinder_zurueck : public Cycle_step {
     //   set_loop_completed();
     // }
     if (cycle_step_delay.delay_time_is_up(200)) {
+      set_loop_completed();
+    }
+  }
+};
+
+// MESSER AUF
+class Messer_auf : public Cycle_step {
+  String get_display_text() { return "MESSER AUF"; }
+
+  void do_initial_stuff() {
+    vent_sledge();
+    cycle_step_delay.set_unstarted();
+  }
+  void do_loop_stuff() {
+    cylinder_messer.set(0);
+    if (cycle_step_delay.delay_time_is_up(10)) {
       set_loop_completed();
     }
   }
@@ -988,7 +1008,7 @@ class Nachklemme_zu : public Cycle_step {
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    if (cycle_step_delay.delay_time_is_up(500)) {
+    if (cycle_step_delay.delay_time_is_up(10)) {
       set_loop_completed();
     }
   }
@@ -1028,13 +1048,13 @@ class Tool_wippe_auf : public Cycle_step {
 void get_electrocylinder_endpoints() {
   Serial.println("START ENDPUNKTINITIALISIERUNG ELEKTROZYLINDER:");
 
-  foerderzylinder_zurueckfahren();
+  foerderzylinder_foerdern();
   Serial.println("FÄHRT ZUR STARTPOSITION");
   while (!sensor_foerderzylinder_in.get_button_state()) {
   }
   Serial.println("STARTPOSITION ERREICHT");
 
-  foerderzylinder_ausfahren();
+  foerderzylinder_zurueck();
   Serial.println("FÄHRT ZUR ENDPOSITION");
   while (!sensor_foerderzylinder_out.get_button_state()) {
   }
@@ -1110,9 +1130,10 @@ void setup() {
   main_cycle_steps.push_back(new Foerderklemme_zu);
   main_cycle_steps.push_back(new Foerdern);
   main_cycle_steps.push_back(new Vorklemme_zu);
-  main_cycle_steps.push_back(new Schneiden);
+  main_cycle_steps.push_back(new Messer_ab);
   main_cycle_steps.push_back(new Foerdereinheit_auf);
   main_cycle_steps.push_back(new Foerderzylinder_zurueck);
+  main_cycle_steps.push_back(new Messer_auf);
   main_cycle_steps.push_back(new Tool_wippe_zu);
   main_cycle_steps.push_back(new Tool_spannen);
   main_cycle_steps.push_back(new Nachklemme_zu);
