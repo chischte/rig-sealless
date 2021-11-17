@@ -176,7 +176,8 @@ NexTouch *nex_listen_list[] = { //
     &nex_page_1, &button_previous_step, &button_next_step, &button_reset_cycle, &switch_play_pause,
     &switch_step_auto_mode,
     // PAGE 1 RIGHT:
-    &button_schneiden, &switch_vorklemme,&switch_nachklemme,&switch_wippenhebel, &switch_entlueften, &button_schlitten,
+    &button_schneiden, &switch_vorklemme, &switch_nachklemme, &switch_wippenhebel, &switch_entlueften,
+    &button_schlitten,
     // PAGE 2 LEFT:
     &nex_page_2, &button_slider_1_left, &button_slider_1_right, &nex_page_2, &button_slider_2_left,
     &button_slider_2_right,
@@ -683,11 +684,11 @@ void display_loop_page_1_right_side() {
     toggle_ds_switch("bt5");
     nex_state_wippenhebel = !nex_state_wippenhebel;
   }
-    if (cylinder_vorklemme.get_state() != nex_state_vorklemme) {
+  if (cylinder_vorklemme.get_state() != nex_state_vorklemme) {
     toggle_ds_switch("bt2");
     nex_state_vorklemme = !nex_state_vorklemme;
   }
-      if (cylinder_nachklemme.get_state() != nex_state_nachklemme) {
+  if (cylinder_nachklemme.get_state() != nex_state_nachklemme) {
     toggle_ds_switch("bt4");
     nex_state_nachklemme = !nex_state_nachklemme;
   }
@@ -699,14 +700,13 @@ void display_loop_page_1_right_side() {
     set_momentary_button_high_or_low(button, state);
     nex_state_schlittenzuluft = cylinder_schlittenzuluft.get_state();
   }
- 
+
   if (cylinder_messer.get_state() != nex_state_messer) {
     bool state = cylinder_messer.get_state();
     String button = "b5";
     set_momentary_button_high_or_low(button, state);
     nex_state_messer = cylinder_messer.get_state();
   }
-  
 }
 
 // DIPLAY LOOP PAGE 2 LEFT SIDE: -----------------------------------------------
@@ -780,9 +780,13 @@ class Luft_ablassen : public Cycle_step {
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    if (cycle_step_delay.delay_time_is_up(2000)) {
+    if (measure_force() < 100) {
       set_loop_completed();
     }
+
+    // if (cycle_step_delay.delay_time_is_up(1500)) {
+    //   set_loop_completed();
+    // }
   }
 };
 
@@ -795,7 +799,7 @@ class Vorklemme_auf : public Cycle_step {
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    if (cycle_step_delay.delay_time_is_up(2000)) {
+    if (cycle_step_delay.delay_time_is_up(200)) {
       set_loop_completed();
     }
   }
@@ -823,7 +827,7 @@ class Nachklemme_auf : public Cycle_step {
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    if (cycle_step_delay.delay_time_is_up(2000)) {
+    if (cycle_step_delay.delay_time_is_up(200)) {
       set_loop_completed();
     }
   }
@@ -835,7 +839,7 @@ class Auswerfen : public Cycle_step {
 
   void do_initial_stuff() { cylinder_wippenhebel.set(1); }
   void do_loop_stuff() {
-    cylinder_auswerfer.stroke(1500, 100);
+    cylinder_auswerfer.stroke(1300, 100);
     if (cylinder_auswerfer.stroke_completed()) {
       set_loop_completed();
     }
@@ -878,7 +882,7 @@ class Vorklemme_zu : public Cycle_step {
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    if (cycle_step_delay.delay_time_is_up(1000)) {
+    if (cycle_step_delay.delay_time_is_up(200)) {
       set_loop_completed();
     }
   }
@@ -967,7 +971,7 @@ class Tool_spannen : public Cycle_step {
     }
 
     if (has_reached_sensor) {
-      if (cycle_step_delay.delay_time_is_up(1000)) {
+      if (cycle_step_delay.delay_time_is_up(600)) {
         cylinder_spanntaste.set(0);
         set_loop_completed();
       }
@@ -984,7 +988,7 @@ class Nachklemme_zu : public Cycle_step {
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    if (cycle_step_delay.delay_time_is_up(1000)) {
+    if (cycle_step_delay.delay_time_is_up(500)) {
       set_loop_completed();
     }
   }
@@ -996,7 +1000,7 @@ class Tool_crimp : public Cycle_step {
 
   void do_initial_stuff() { send_log_start_crimping(); }
   void do_loop_stuff() {
-    cylinder_crimptaste.stroke(500, 1500);
+    cylinder_crimptaste.stroke(500, 2200);
     if (cylinder_crimptaste.stroke_completed()) {
       set_loop_completed();
     }
@@ -1067,7 +1071,7 @@ void power_off_electrocylinder() {
 void monitor_emergency_signal() {
 
   // (RE-)START SYSTEM
-  if (emergency_stop_signal.switched_low()) { 
+  if (emergency_stop_signal.switched_low()) {
     power_on_electrocylinder();
     cylinder_hydraulik_pressure.set(1);
   }
