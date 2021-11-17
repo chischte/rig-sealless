@@ -928,7 +928,7 @@ class Foerderzylinder_zurueck : public Cycle_step {
     // if (sensor_foerderzylinder_out.switched_high()) {
     //   set_loop_completed();
     // }
-    if (cycle_step_delay.delay_time_is_up(700)) {
+    if (cycle_step_delay.delay_time_is_up(200)) {
       set_loop_completed();
     }
   }
@@ -1000,7 +1000,7 @@ class Tool_crimp : public Cycle_step {
 
   void do_initial_stuff() { send_log_start_crimping(); }
   void do_loop_stuff() {
-    cylinder_crimptaste.stroke(500, 2200);
+    cylinder_crimptaste.stroke(500, 2500);
     if (cylinder_crimptaste.stroke_completed()) {
       set_loop_completed();
     }
