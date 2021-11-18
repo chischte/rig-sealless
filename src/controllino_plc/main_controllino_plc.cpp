@@ -119,9 +119,11 @@ void send_log_cycle_total(long value) {
   Serial1.println(";");
 }
 void send_log_force_tension(long value) {
-  Serial1.print("LOG;FORCE_TENSION;");
-  Serial1.print(value);
-  Serial1.println(";");
+  if (value > 100) {
+    Serial1.print("LOG;FORCE_TENSION;");
+    Serial1.print(value);
+    Serial1.println(";");
+  }
 }
 void send_log_start_tensioning() { //
   Serial1.println("LOG;START_TENSION;");
@@ -775,7 +777,7 @@ void reset_lower_counter_value() {
 // SCHLITTEN ENTLÜFTEN
 class Luft_ablassen : public Cycle_step {
   String get_display_text() { return "LUFT ABLASSEN"; }
-    bool pressure_low = false;
+  bool pressure_low = false;
 
   void do_initial_stuff() {
     vent_sledge();
