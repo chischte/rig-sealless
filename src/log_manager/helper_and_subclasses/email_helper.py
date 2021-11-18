@@ -12,7 +12,7 @@ class email_helper():
         #'b.hubschmid@signode.com'
         #'a.keller@signode.com'
         
-        self.receivers = ['m.wettstein@signode.com']
+        self.receivers = ['m.wettstein@signode.com','b.hubschmid@signode.com','pbuser@signode.com']
 
     def send_mail(self, subject, message_body):
         msg = MIMEText(message_body, 'html')
