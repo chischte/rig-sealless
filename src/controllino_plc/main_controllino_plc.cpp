@@ -101,7 +101,7 @@ Cylinder cylinder_messer(CONTROLLINO_D1);
 
 Insomnia nex_reset_button_timeout(10000); // pushtime to reset counter
 Insomnia print_interval_timeout(1000);
-Insomnia erase_force_value_timeout(10000);
+Insomnia erase_force_value_timeout(5000);
 Insomnia machine_stopped_error_timeout(25000); // electrocylinder takes up to 20" to find start position
 Insomnia pressure_update_delay;
 Insomnia cycle_step_delay;
