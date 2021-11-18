@@ -113,7 +113,7 @@ class graph_creator():
         ax_f_tens.legend(['Tensioning Force [N]'], loc='upper center')
         ax_f_tens.set_xlim(left=0)
         ax_f_tens.set_xticks([])
-        ax_f_tens.set_ylim(bottom=0, top=3000)
+        ax_f_tens.set_ylim(bottom=0, top=6000)
 
         ax_i_tens.plot(i_tens_array, color=col_yellow)
         ax_i_tens.legend(['Tensioning Current [A]'], loc='upper center')
