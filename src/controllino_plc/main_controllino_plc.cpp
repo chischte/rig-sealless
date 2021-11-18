@@ -775,14 +775,22 @@ void reset_lower_counter_value() {
 // SCHLITTEN ENTLÜFTEN
 class Luft_ablassen : public Cycle_step {
   String get_display_text() { return "LUFT ABLASSEN"; }
+    bool pressure_low = false;
 
   void do_initial_stuff() {
     vent_sledge();
+    pressure_low = false;
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    if (measure_force() < 500) {
-      set_loop_completed();
+    if (measure_force() < 1000) {
+      pressure_low = true;
+    }
+
+    if (pressure_low) {
+      if (cycle_step_delay.delay_time_is_up(10)) {
+        set_loop_completed();
+      }
     }
 
     // if (cycle_step_delay.delay_time_is_up(1500)) {
@@ -800,7 +808,7 @@ class Vorklemme_auf : public Cycle_step {
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    if (cycle_step_delay.delay_time_is_up(200)) {
+    if (cycle_step_delay.delay_time_is_up(800)) {
       set_loop_completed();
     }
   }
@@ -953,7 +961,7 @@ class Messer_auf : public Cycle_step {
   }
 };
 
-// WIPPENHEBEL SCHLIESSEN 
+// WIPPENHEBEL SCHLIESSEN
 class Tool_wippe_zu : public Cycle_step {
   String get_display_text() { return "WIPPE ZU"; }
 
@@ -962,7 +970,7 @@ class Tool_wippe_zu : public Cycle_step {
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    if (cycle_step_delay.delay_time_is_up(600)) {
+    if (cycle_step_delay.delay_time_is_up(700)) {
       set_loop_completed();
     }
   }
@@ -1019,7 +1027,7 @@ class Tool_crimp : public Cycle_step {
 
   void do_initial_stuff() { send_log_start_crimping(); }
   void do_loop_stuff() {
-    cylinder_crimptaste.stroke(500, 2500);
+    cylinder_crimptaste.stroke(500, 2200);
     if (cylinder_crimptaste.stroke_completed()) {
       set_loop_completed();
     }
