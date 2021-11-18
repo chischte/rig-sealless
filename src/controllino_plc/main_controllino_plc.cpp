@@ -231,13 +231,13 @@ void vent_sledge() {
 
 void set_initial_cylinder_states() {
   cylinder_messer.set(0);
-  cylinder_nachklemme.set(0);
   cylinder_schlittenzuluft.set(0);
   cylinder_schlittenabluft.set(0);
   cylinder_wippenhebel.set(0);
   cylinder_spanntaste.set(0);
   cylinder_vorschubklemme.set(0);
   cylinder_vorklemme.set(0);
+  cylinder_nachklemme.set(0);
   cylinder_crimptaste.set(0);
   foerderzylinder_zurueck();
 }
@@ -781,7 +781,7 @@ class Luft_ablassen : public Cycle_step {
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    if (measure_force() < 100) {
+    if (measure_force() < 500) {
       set_loop_completed();
     }
 
@@ -840,10 +840,8 @@ class Auswerfen : public Cycle_step {
 
   void do_initial_stuff() { cylinder_wippenhebel.set(1); }
   void do_loop_stuff() {
-    cylinder_auswerfer.stroke(1300, 10);
-    if (cylinder_auswerfer.stroke_completed()) {
-      set_loop_completed();
-    }
+    cylinder_auswerfer.set(1);
+    set_loop_completed();
   }
 };
 
@@ -856,7 +854,7 @@ class Foerderklemme_zu : public Cycle_step {
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    if (cycle_step_delay.delay_time_is_up(500)) {
+    if (cycle_step_delay.delay_time_is_up(600)) {
       set_loop_completed();
     }
   }
@@ -869,6 +867,7 @@ class Foerdern : public Cycle_step {
   void do_initial_stuff() { foerderzylinder_foerdern(); }
   void do_loop_stuff() {
     if (sensor_foerderzylinder_in.switched_high()) {
+      cylinder_auswerfer.set(0);
       set_loop_completed();
     }
   }
@@ -899,7 +898,7 @@ class Messer_ab : public Cycle_step {
   }
   void do_loop_stuff() {
     cylinder_messer.set(1);
-    if (cycle_step_delay.delay_time_is_up(500)) {
+    if (cycle_step_delay.delay_time_is_up(600)) {
       set_loop_completed();
     }
   }
@@ -914,7 +913,7 @@ class Foerdereinheit_auf : public Cycle_step {
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    if (cycle_step_delay.delay_time_is_up(500)) {
+    if (cycle_step_delay.delay_time_is_up(600)) {
       set_loop_completed();
     }
   }
@@ -932,7 +931,7 @@ class Foerderzylinder_zurueck : public Cycle_step {
     // if (sensor_foerderzylinder_out.switched_high()) {
     //   set_loop_completed();
     // }
-    if (cycle_step_delay.delay_time_is_up(200)) {
+    if (cycle_step_delay.delay_time_is_up(10)) {
       set_loop_completed();
     }
   }
@@ -954,7 +953,7 @@ class Messer_auf : public Cycle_step {
   }
 };
 
-// WIPPENHEBEL SCHLIESSEN
+// WIPPENHEBEL SCHLIESSEN 
 class Tool_wippe_zu : public Cycle_step {
   String get_display_text() { return "WIPPE ZU"; }
 
@@ -963,7 +962,7 @@ class Tool_wippe_zu : public Cycle_step {
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    if (cycle_step_delay.delay_time_is_up(500)) {
+    if (cycle_step_delay.delay_time_is_up(600)) {
       set_loop_completed();
     }
   }
@@ -1116,8 +1115,6 @@ void setup() {
   pinMode(FOERDERZYLINDER_LOGIC_POWER_RELAY, OUTPUT);
   pinMode(FOERDERZYLINDER_MOVE_IN, OUTPUT);
   pinMode(FOERDERZYLINDER_MOVE_OUT, OUTPUT);
-  // sensor_sledge_startposition.set_debounce_time(100);
-  // sensor_sledge_endposition.set_debounce_time(100);
 
   //------------------------------------------------
   // PUSH THE CYCLE STEPS INTO THE VECTOR CONTAINER:
