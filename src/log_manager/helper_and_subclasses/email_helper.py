@@ -4,15 +4,16 @@ from email.mime.text import MIMEText
 from helper_and_subclasses.email_secret_config import *
 from datetime import datetime
 
+
 class email_helper():
 
     def __init__(self):
         self.sender = 'dauertest.bst@gmail.com'
-        #'m.neeser@signode.com'
-        #'b.hubschmid@signode.com'
-        #'a.keller@signode.com'
-        
-        self.receivers = ['m.wettstein@signode.com','b.hubschmid@signode.com','pbuser@signode.com']
+        # 'm.neeser@signode.com'
+        # 'b.hubschmid@signode.com'
+        # 'a.keller@signode.com'
+
+        self.receivers = ['m.wettstein@signode.com', 'b.hubschmid@signode.com', 'pbuser@signode.com']
 
     def send_mail(self, subject, message_body):
         msg = MIMEText(message_body, 'html')
@@ -33,16 +34,9 @@ class email_helper():
         timestamp = datetime.now().strftime("%H:%M")
         subject = f'BST DAUERTEST HAT GESTOPPT'
         message_body = f'\
+        <h3>-----\
         <h2> BST DAUERTEST HAT GESTOPPT AM {datestamp} UM {timestamp} UHR\
-        <h3>Obwohl der Dauertest im Automatikbetrieb war, wurde während 60 Sekunden \
-        kein Tool-Zyklus mehr erfolgreich durchgeführt.\
-        <p>Mögliche Ursachen:\
-            <ul>\
-            <li>Band leer\
-            <li>Störung am Gerät\
-            <li>Störung Dauertestrig\
-            <li>Störung Steuerung\
-            </ul>\
+        <h3>-----\
         <h3>Der Log mit den aktuellen Messdaten kann hier eingesehen werden: \
         <p>"T:\Dauer Test\show_sealles_log.exe"\
             '
@@ -60,8 +54,9 @@ class email_helper():
             '
         self.send_mail(subject, message_body)
 
+
 if __name__ == '__main__':
-    
+
     email_helper = email_helper()
     email_helper.send_message_machine_stopped()
     # email_helper.send_message_button_pushed()
