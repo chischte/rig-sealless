@@ -102,6 +102,7 @@ Cylinder cylinder_messer(CONTROLLINO_D1);
 Insomnia nex_reset_button_timeout(10000); // pushtime to reset counter
 Insomnia print_interval_timeout(1000);
 Insomnia erase_force_value_timeout(5000);
+Insomnia log_force_value_timeout(1000);
 Insomnia machine_stopped_error_timeout(25000); // electrocylinder takes up to 20" to find start position
 Insomnia pressure_update_delay;
 Insomnia cycle_step_delay;
@@ -312,25 +313,41 @@ int measure_force() {
 }
 
 void measure_and_display_max_force() {
-  int force = measure_force();
+
   static int max_force;
   static int previous_max_force;
 
+  int force = measure_force();
+
+  // Stop timers when force is rising:
   if (force > max_force) {
     max_force = force;
     erase_force_value_timeout.reset_time();
+    log_force_value_timeout.reset_time();
   }
 
+  // Update display every 100ms:
   if (max_force > previous_max_force && pressure_update_delay.delay_time_is_up(100)) {
     display_force(max_force);
     previous_max_force = max_force;
   }
 
+  // Clear display:
   if (erase_force_value_timeout.has_timed_out()) {
-    send_log_force_tension(max_force);
     max_force = -1; // negative to make certain value updates
     previous_max_force = -1;
     erase_force_value_timeout.reset_time();
+  }
+
+  // Prevent logging of insignificant values:
+  if (force < 200) {
+    log_force_value_timeout.reset_time();
+  }
+
+  // Log max force value:
+  if (log_force_value_timeout.has_timed_out()) {
+    send_log_force_tension(max_force);
+    log_force_value_timeout.reset_time();
   }
 }
 
