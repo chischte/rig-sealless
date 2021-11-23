@@ -1233,8 +1233,6 @@ void monitor_machine_stopped_error_timeout() {
   }
 }
 
-
-
 void monitor_temperature_error() {
   if (get_temperature() > 60) {
     state_controller.set_machine_stop();
@@ -1281,10 +1279,7 @@ void run_step_or_auto_mode() {
   }
 }
 
-void loop() {
-
-  // MONITOR EMERGENCY SIGNAL:
-  monitor_emergency_signal();
+void rig_active_loop() {
 
   // UPDATE DISPLAY:
   nextion_display_loop();
@@ -1309,6 +1304,19 @@ void loop() {
   if (print_interval_timeout.has_timed_out()) {
     //Serial.println(runtime);
     print_interval_timeout.reset_time();
+  }
+}
+
+void loop() {
+
+  // MONITOR EMERGENCY SIGNAL:
+  monitor_emergency_signal();
+
+  if (!emergency_stop_signal.get_button_state()) {
+    rig_active_loop(); 
+    // ... only required because pressure power is not switched yet
+    // rig_active loop can be replaced by switching pressure of
+    // when security valve is installed
   }
 }
 
