@@ -51,6 +51,7 @@ void increase_slider_value(int eeprom_value_number);
 void decrease_slider_value(int eeprom_value_number);
 void update_field_values_page_2();
 void show_info_field();
+void display_temperature();
 String get_main_cycle_display_string();
 String add_suffix_to_eeprom_value(int eeprom_value_number, String suffix);
 
@@ -87,6 +88,7 @@ const byte TRENNRELAIS_ZYLINDER_1 = CONTROLLINO_R4; // turn off >=100ms before l
 const byte TRENNRELAIS_ZYLINDER_2 = CONTROLLINO_R5; // turn off >=100ms before logic power off
 const byte FOERDERZYLINDER_MOVE_IN = CONTROLLINO_D9; // GREY
 const byte FOERDERZYLINDER_MOVE_OUT = CONTROLLINO_D10; // PINK
+const byte TEMP_SENSOR_PIN = CONTROLLINO_A2;
 Cylinder cylinder_schlittenzuluft(CONTROLLINO_D4);
 Cylinder cylinder_schlittenabluft(CONTROLLINO_R8);
 Cylinder cylinder_auswerfer(CONTROLLINO_D3);
@@ -207,6 +209,7 @@ long nex_empty_slider_1;
 long nex_empty_slider_2;
 long nex_shorttime_counter;
 long nex_longtime_counter;
+int nex_prev_current_temperature;
 
 // CREATE VECTOR CONTAINER FOR THE CYCLE STEPS OBJECTS ************************
 
@@ -360,6 +363,18 @@ void measure_and_display_current_force() {
     display_force(force);
     previous_force = force;
   }
+}
+
+int get_temperature() {
+  const float voltsPerUnit = 0.03; // DATASHEET
+  const float maxVoltage = 10;
+  const float maxSensorTemp = 200;
+  float sensorValue = analogRead(TEMP_SENSOR_PIN);
+  float sensorVoltage = sensorValue * voltsPerUnit;
+  float temperature = sensorVoltage / maxVoltage * maxSensorTemp;
+  int temperatureInt = temperature;
+
+  return temperatureInt;
 }
 
 // NEXTION GENERAL DISPLAY FUNCTIONS *******************************************
@@ -580,6 +595,7 @@ void update_field_values_page_2() {
   nex_empty_slider_2 = counter.get_value(nex_empty_slider_2) - 1;
   nex_shorttime_counter = counter.get_value(nex_empty_slider_1) - 1;
   nex_longtime_counter = counter.get_value(nex_empty_slider_1) - 1;
+  nex_prev_current_temperature = -1;
 }
 
 // DECLARE DISPLAY EVENT LISTENERS *********************************************
@@ -735,8 +751,26 @@ void display_loop_page_2_left_side() {
   update_upper_slider_value();
   update_lower_slider_value();
   update_switches_page_2_left();
+  display_temperature();
 
   // UPDATE SWITCH:
+}
+
+void print_on_text_field(String text, String textField) {
+  Serial2.print(textField);
+  Serial2.print(".txt=");
+  Serial2.print("\"");
+  Serial2.print(text);
+  Serial2.print("\"");
+  send_to_nextion();
+}
+
+void display_temperature() {
+  // TODO: IF TEMPERATURE HAS CHANGED MORE THAN ONE DEGREE, UPDATE:
+  if (nex_prev_current_temperature != get_temperature()) {
+    print_on_text_field("t=" + String(get_temperature()), "t2");
+    nex_prev_current_temperature = get_temperature();
+  }
 }
 
 void update_upper_slider_value() {
@@ -1196,6 +1230,18 @@ void monitor_machine_stopped_error_timeout() {
     send_email_machine_stopped();
     show_info_field();
     display_text_in_info_field("TIMEOUT ERROR");
+  }
+}
+
+
+
+void monitor_temperature_error() {
+  if (get_temperature() > 60) {
+    state_controller.set_machine_stop();
+    state_controller.set_error_mode(true);
+    send_email_machine_stopped();
+    show_info_field();
+    display_text_in_info_field("TEMPERATURE ERROR");
   }
 }
 
