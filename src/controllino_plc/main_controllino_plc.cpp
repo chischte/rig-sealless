@@ -89,10 +89,10 @@ const byte TRENNRELAIS_ZYLINDER_2 = CONTROLLINO_R5; // turn off >=100ms before l
 const byte FOERDERZYLINDER_MOVE_IN = CONTROLLINO_D9; // GREY
 const byte FOERDERZYLINDER_MOVE_OUT = CONTROLLINO_D10; // PINK
 const byte TEMP_SENSOR_PIN = CONTROLLINO_A2;
-Cylinder cylinder_kuehlluft(CONTROLLINO_D11);
+Cylinder cylinder_kuehlluft(CONTROLLINO_D13);
 Cylinder cylinder_schlittenzuluft(CONTROLLINO_D4);
 Cylinder cylinder_schlittenabluft(CONTROLLINO_R8);
-Cylinder cylinder_auswerfer(CONTROLLINO_D3);
+// Cylinder cylinder_auswerfer(CONTROLLINO_D3);
 Cylinder cylinder_spanntaste(CONTROLLINO_D5);
 Cylinder cylinder_crimptaste(CONTROLLINO_D2);
 Cylinder cylinder_wippenhebel(CONTROLLINO_D0);
@@ -260,7 +260,7 @@ void reset_machine() {
   state_controller.set_error_mode(false);
   set_initial_cylinder_states();
   clear_text_field("t4");
-  hide_info_field();
+  // hide_info_field();
   state_controller.set_step_mode();
   reset_flag_of_current_step();
   state_controller.set_current_step_to(0);
@@ -898,17 +898,6 @@ class Nachklemme_auf : public Cycle_step {
   }
 };
 
-// AUSWERFER BETÄTIGEN
-class Auswerfen : public Cycle_step {
-  String get_display_text() { return "AUSWERFEN"; }
-
-  void do_initial_stuff() { cylinder_wippenhebel.set(1); }
-  void do_loop_stuff() {
-    cylinder_auswerfer.set(1);
-    set_loop_completed();
-  }
-};
-
 // FÖRDERKLEMME SCHLIESSEN
 class Foerderklemme_zu : public Cycle_step {
   String get_display_text() { return "FOERDERKLEMME ZU"; }
@@ -931,7 +920,6 @@ class Foerdern : public Cycle_step {
   void do_initial_stuff() { foerderzylinder_foerdern(); }
   void do_loop_stuff() {
     if (sensor_foerderzylinder_in.switched_high()) {
-      cylinder_auswerfer.set(0);
       set_loop_completed();
     }
   }
@@ -1108,19 +1096,20 @@ class Tool_wippe_auf : public Cycle_step {
 class Tool_pause : public Cycle_step {
   String get_display_text() { return "PAUSE"; }
 
-  void do_initial_stuff() {
-    cycle_step_delay.set_unstarted();
-  }
+  void do_initial_stuff() { cycle_step_delay.set_unstarted(); }
   void do_loop_stuff() {
+    static int previous_timeout_time = 0;
+    int timeout_time = cycle_step_delay.get_remaining_delay_time() / 1000;
+    if (timeout_time != previous_timeout_time) {
+      display_text_in_field(String(timeout_time) + "s", "t0");
+      previous_timeout_time = timeout_time;
+    }
+
     if (cycle_step_delay.delay_time_is_up(12000)) {
       set_loop_completed();
     }
   }
 };
-
-
-
-
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -1179,7 +1168,10 @@ void monitor_emergency_signal() {
 
   // STOP SYSTEM
   if (emergency_stop_signal.switched_high()) {
+    state_controller.set_step_mode(); // deactivates cooling air
+    cylinder_kuehlluft.set(0);
     reset_machine();
+    display_text_in_info_field("NOT AUS AKTIV");
     power_off_electrocylinder();
     delay(1500); // wait for hydraulic cylinders to move back
     cylinder_hydraulik_pressure.set(0);
@@ -1205,7 +1197,6 @@ void setup() {
   main_cycle_steps.push_back(new Vorklemme_auf);
   main_cycle_steps.push_back(new Schlitten_zurueck);
   main_cycle_steps.push_back(new Nachklemme_auf);
-  main_cycle_steps.push_back(new Auswerfen);
   main_cycle_steps.push_back(new Foerderklemme_zu);
   main_cycle_steps.push_back(new Foerdern);
   main_cycle_steps.push_back(new Vorklemme_zu);
@@ -1229,7 +1220,7 @@ void setup() {
   //------------------------------------------------
   Serial.begin(115200);
   Serial1.begin(115200); // used to log to raspberry log merger via USB-Serial-Converter @ TX1/RX1
-  state_controller.set_auto_mode();
+  state_controller.set_step_mode();
 
   //------------------------------------------------
   nextion_display_setup();
@@ -1316,10 +1307,6 @@ void rig_active_loop() {
     reset_machine();
   }
 
-  // CONTROL COOLING AIR
-  cylinder_kuehlluft.set(state_controller.is_in_auto_mode());
-
-
   // DISPLAY DEBUG INFOMATION:
   //unsigned long runtime = measure_runtime();
   if (print_interval_timeout.has_timed_out()) {
@@ -1333,8 +1320,11 @@ void loop() {
   // MONITOR EMERGENCY SIGNAL:
   monitor_emergency_signal();
 
+  // CONTROL COOLING AIR
+  cylinder_kuehlluft.set(state_controller.is_in_auto_mode());
+
   if (!emergency_stop_signal.get_button_state()) {
-    rig_active_loop(); 
+    rig_active_loop();
     // ... only required because pressure power is not switched yet
     // rig_active loop can be replaced by switching pressure of
     // when security valve is installed
