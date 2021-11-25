@@ -77,10 +77,15 @@ class graph_creator():
         for ts in df['CRIMP CURRENT']:
             i_crimp_array.append(ts)
 
-        # CREATE CRIMP CURRENT VALUES
+        # CREATE CYCLES RESET VALUES
         n_reset_count_array = []
         for ts in df['CYCLES RESET']:
             n_reset_count_array.append(ts)
+
+        # CREATE CYCLES TOTAL VALUES
+        n_total_count_array = []
+        for ts in df['CYCLES TOTAL']:
+            n_total_count_array.append(ts)
 
         # CREATE TICKS
         ticks_timestamp_array = []
@@ -107,7 +112,7 @@ class graph_creator():
         col_pink = '#d96eae'
         col_purple = '#7049a3'
 
-        fig, (ax_f_tens, ax_i_tens, ax_i_crimp, ax_n_count) = plt.subplots(4, 1, figsize=(14, 8))
+        fig, (ax_f_tens, ax_i_tens, ax_i_crimp, ax_n_count, ax_n_tot_count) = plt.subplots(5, 1, figsize=(14, 8))
 
         ax_f_tens.plot(f_tens_array, color=col_green)
         ax_f_tens.legend(['Tensioning Force [N]'], loc='upper center')
@@ -131,10 +136,15 @@ class graph_creator():
         ax_i_crimp.set_yticks([20, 30, 40, 50, 60])
 
         ax_n_count.plot(n_reset_count_array, color=col_purple)
-        ax_n_count.legend(['Cycle Count'], loc='upper center')
+        ax_n_count.legend(['Cycles Reset'], loc='upper center')
         ax_n_count.set_xlim(left=0)
         ax_n_count.set_xticks(ticks_index_array)
         # ax_n_count.set_xticklabels(ticks_timestamp_array, rotation=90)
+
+        ax_n_tot_count.plot(n_total_count_array, color=col_yellow)
+        ax_n_tot_count.legend(['Cycles Total'], loc='upper center')
+        ax_n_tot_count.set_xlim(left=0)
+        ax_n_tot_count.set_xticks(ticks_index_array)
 
         plt.tight_layout()  # arrange graphs more compact
         plt.subplots_adjust(hspace=0.1)  # even more compact
