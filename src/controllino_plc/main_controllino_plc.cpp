@@ -89,6 +89,7 @@ const byte TRENNRELAIS_ZYLINDER_2 = CONTROLLINO_R5; // turn off >=100ms before l
 const byte FOERDERZYLINDER_MOVE_IN = CONTROLLINO_D9; // GREY
 const byte FOERDERZYLINDER_MOVE_OUT = CONTROLLINO_D10; // PINK
 const byte TEMP_SENSOR_PIN = CONTROLLINO_A2;
+Cylinder cylinder_kuehlluft(CONTROLLINO_D11);
 Cylinder cylinder_schlittenzuluft(CONTROLLINO_D4);
 Cylinder cylinder_schlittenabluft(CONTROLLINO_R8);
 Cylinder cylinder_auswerfer(CONTROLLINO_D3);
@@ -470,6 +471,7 @@ void switch_step_auto_mode_push(void *ptr) {
 void button_stepback_push(void *ptr) {
   state_controller.set_machine_stop();
   reset_flag_of_current_step();
+  state_controller.set_step_mode();
   state_controller.switch_to_previous_step();
   reset_flag_of_current_step();
 }
@@ -477,6 +479,7 @@ void button_stepback_push(void *ptr) {
 void button_next_step_push(void *ptr) {
   state_controller.set_machine_stop();
   reset_flag_of_current_step();
+  state_controller.set_step_mode();
   state_controller.switch_to_next_step();
   reset_flag_of_current_step();
 }
@@ -1101,6 +1104,24 @@ class Tool_wippe_auf : public Cycle_step {
   void do_loop_stuff() { set_loop_completed(); }
 };
 
+// PAUSE
+class Tool_pause : public Cycle_step {
+  String get_display_text() { return "PAUSE"; }
+
+  void do_initial_stuff() {
+    cycle_step_delay.set_unstarted();
+  }
+  void do_loop_stuff() {
+    if (cycle_step_delay.delay_time_is_up(12000)) {
+      set_loop_completed();
+    }
+  }
+};
+
+
+
+
+
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -1197,6 +1218,7 @@ void setup() {
   main_cycle_steps.push_back(new Nachklemme_zu);
   main_cycle_steps.push_back(new Tool_crimp);
   main_cycle_steps.push_back(new Tool_wippe_auf);
+  main_cycle_steps.push_back(new Tool_pause);
   //------------------------------------------------
   // CONFIGURE THE STATE CONTROLLER:
   int no_of_main_cycle_steps = main_cycle_steps.size();
@@ -1294,10 +1316,9 @@ void rig_active_loop() {
     reset_machine();
   }
 
-  // JUST FOR FUN:
-  if (email_button.switched_high()) {
-    send_email_button_pushed();
-  }
+  // CONTROL COOLING AIR
+  cylinder_kuehlluft.set(state_controller.is_in_auto_mode());
+
 
   // DISPLAY DEBUG INFOMATION:
   //unsigned long runtime = measure_runtime();
