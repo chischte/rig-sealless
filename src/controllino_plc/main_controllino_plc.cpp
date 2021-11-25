@@ -60,7 +60,7 @@ String add_suffix_to_eeprom_value(int eeprom_value_number, String suffix);
 enum counter {
   longtime_counter, //
   shorttime_counter, //
-  empty_slider_1, //
+  cycle_duration, //
   empty_slider_2, //
   end_of_counter_enum // keep this entry
 };
@@ -206,7 +206,7 @@ bool nex_state_machine_running;
 bool nex_state_step_mode = true;
 byte nex_prev_cycle_step;
 byte nex_current_page = 0;
-long nex_empty_slider_1;
+long nex_cycle_duration;
 long nex_empty_slider_2;
 long nex_shorttime_counter;
 long nex_longtime_counter;
@@ -533,10 +533,15 @@ void button_schlitten_pop(void *ptr) { //
 
 // TOUCH EVENT FUNCTIONS PAGE 2 - LEFT SIDE ------------------------------------
 
-void button_upper_slider_left_push(void *ptr) { decrease_slider_value(empty_slider_1); }
-void button_upper_slider_right_push(void *ptr) { increase_slider_value(empty_slider_1); }
+void button_upper_slider_left_push(void *ptr) {
+  String haudistring = "haudi";
+  display_text_in_field(haudistring, "t24");
+  // decrease_slider_value(cycle_duration);
+}
+void button_upper_slider_right_push(void *ptr) { increase_slider_value(cycle_duration); }
 void button_lower_slider_left_push(void *ptr) { decrease_slider_value(empty_slider_2); }
 void button_lower_slider_right_push(void *ptr) { increase_slider_value(empty_slider_2); }
+
 void increase_slider_value(int eeprom_value_number) {
   long max_value = 350; // [mm]
   long interval = 5;
@@ -594,10 +599,10 @@ void page_2_push(void *ptr) {
   update_field_values_page_2();
 }
 void update_field_values_page_2() {
-  nex_empty_slider_1 = counter.get_value(nex_empty_slider_1) - 1;
+  nex_cycle_duration = counter.get_value(nex_cycle_duration) - 1;
   nex_empty_slider_2 = counter.get_value(nex_empty_slider_2) - 1;
-  nex_shorttime_counter = counter.get_value(nex_empty_slider_1) - 1;
-  nex_longtime_counter = counter.get_value(nex_empty_slider_1) - 1;
+  nex_shorttime_counter = counter.get_value(nex_shorttime_counter) - 1;
+  nex_longtime_counter = counter.get_value(nex_longtime_counter) - 1;
   nex_prev_current_temperature = -1;
 }
 
@@ -759,27 +764,18 @@ void display_loop_page_2_left_side() {
   // UPDATE SWITCH:
 }
 
-void print_on_text_field(String text, String textField) {
-  Serial2.print(textField);
-  Serial2.print(".txt=");
-  Serial2.print("\"");
-  Serial2.print(text);
-  Serial2.print("\"");
-  send_to_nextion();
-}
-
 void display_temperature() {
   // TODO: IF TEMPERATURE HAS CHANGED MORE THAN ONE DEGREE, UPDATE:
   if (nex_prev_current_temperature != get_temperature()) {
-    print_on_text_field("t=" + String(get_temperature()), "t2");
+    // display_text_in_field("t=" + String(get_temperature()), "t2");
     nex_prev_current_temperature = get_temperature();
   }
 }
 
 void update_upper_slider_value() {
-  if (counter.get_value(empty_slider_1) != nex_empty_slider_1) {
-    display_text_in_field(add_suffix_to_eeprom_value(empty_slider_1, "mm"), "t4");
-    nex_empty_slider_1 = counter.get_value(empty_slider_1);
+  if (counter.get_value(cycle_duration) != nex_cycle_duration) {
+    display_text_in_field(add_suffix_to_eeprom_value(cycle_duration, "mm"), "t2");
+    nex_cycle_duration = counter.get_value(cycle_duration);
   }
 }
 void update_lower_slider_value() {
@@ -1101,7 +1097,7 @@ class Tool_pause : public Cycle_step {
     static int previous_timeout_time = 0;
     int timeout_time = cycle_step_delay.get_remaining_delay_time() / 1000;
     if (timeout_time != previous_timeout_time) {
-      display_text_in_field(String(timeout_time) + "s", "t0");
+      display_text_in_field(String(timeout_time), "t0");
       previous_timeout_time = timeout_time;
     }
 
