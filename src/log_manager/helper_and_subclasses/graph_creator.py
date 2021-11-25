@@ -138,13 +138,15 @@ class graph_creator():
         ax_n_count.plot(n_reset_count_array, color=col_purple)
         ax_n_count.legend(['Cycles Reset'], loc='upper center')
         ax_n_count.set_xlim(left=0)
-        ax_n_count.set_xticks(ticks_index_array)
+        ax_n_count.set_xticks([])
+        # ax_n_count.set_xticks(ticks_index_array)
         # ax_n_count.set_xticklabels(ticks_timestamp_array, rotation=90)
 
         ax_n_tot_count.plot(n_total_count_array, color=col_yellow)
         ax_n_tot_count.legend(['Cycles Total'], loc='upper center')
         ax_n_tot_count.set_xlim(left=0)
-        ax_n_tot_count.set_xticks(ticks_index_array)
+        ax_n_tot_count.set_xticks([])
+        # ax_n_tot_count.set_xticks(ticks_index_array)
 
         plt.tight_layout()  # arrange graphs more compact
         plt.subplots_adjust(hspace=0.1)  # even more compact
