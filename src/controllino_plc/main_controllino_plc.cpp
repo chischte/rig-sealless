@@ -61,7 +61,7 @@ enum counter {
   longtime_counter, //
   shorttime_counter, //
   cycle_duration, //
-  empty_slider_2, //
+  max_temperature, //
   end_of_counter_enum // keep this entry
 };
 int counter_no_of_values = end_of_counter_enum;
@@ -108,7 +108,11 @@ Insomnia erase_force_value_timeout(5000);
 Insomnia log_force_value_timeout(1000);
 Insomnia machine_stopped_error_timeout(25000); // electrocylinder takes up to 20" to find start position
 Insomnia pressure_update_delay;
+Insomnia temperature_update_delay;
 Insomnia cycle_step_delay;
+
+// GLOBAL VARIABLES: -----------------------------------------------------------
+unsigned long cycle_start_millis = millis();
 
 // LOGS AND EMAILS: ------------------------------------------------------------
 
@@ -207,7 +211,7 @@ bool nex_state_step_mode = true;
 byte nex_prev_cycle_step;
 byte nex_current_page = 0;
 long nex_cycle_duration;
-long nex_empty_slider_2;
+long nex_max_temperature;
 long nex_shorttime_counter;
 long nex_longtime_counter;
 int nex_prev_current_temperature;
@@ -260,7 +264,7 @@ void reset_machine() {
   state_controller.set_error_mode(false);
   set_initial_cylinder_states();
   clear_text_field("t4");
-  // hide_info_field();
+  hide_info_field();
   state_controller.set_step_mode();
   reset_flag_of_current_step();
   state_controller.set_current_step_to(0);
@@ -533,14 +537,10 @@ void button_schlitten_pop(void *ptr) { //
 
 // TOUCH EVENT FUNCTIONS PAGE 2 - LEFT SIDE ------------------------------------
 
-void button_upper_slider_left_push(void *ptr) {
-  String haudistring = "haudi";
-  display_text_in_field(haudistring, "t24");
-  // decrease_slider_value(cycle_duration);
-}
+void button_upper_slider_left_push(void *ptr) { decrease_slider_value(cycle_duration); }
 void button_upper_slider_right_push(void *ptr) { increase_slider_value(cycle_duration); }
-void button_lower_slider_left_push(void *ptr) { decrease_slider_value(empty_slider_2); }
-void button_lower_slider_right_push(void *ptr) { increase_slider_value(empty_slider_2); }
+void button_lower_slider_left_push(void *ptr) { decrease_slider_value(max_temperature); }
+void button_lower_slider_right_push(void *ptr) { increase_slider_value(max_temperature); }
 
 void increase_slider_value(int eeprom_value_number) {
   long max_value = 350; // [mm]
@@ -600,7 +600,7 @@ void page_2_push(void *ptr) {
 }
 void update_field_values_page_2() {
   nex_cycle_duration = counter.get_value(nex_cycle_duration) - 1;
-  nex_empty_slider_2 = counter.get_value(nex_empty_slider_2) - 1;
+  nex_max_temperature = counter.get_value(nex_max_temperature) - 1;
   nex_shorttime_counter = counter.get_value(nex_shorttime_counter) - 1;
   nex_longtime_counter = counter.get_value(nex_longtime_counter) - 1;
   nex_prev_current_temperature = -1;
@@ -681,6 +681,7 @@ void nextion_display_loop() {
 void display_loop_page_1_left_side() {
 
   update_cycle_name();
+  display_temperature();
 
   // UPDATE SWITCHSTATE "STEP"/"AUTO"-MODE:
   if (nex_state_step_mode != state_controller.is_in_step_mode()) {
@@ -759,7 +760,6 @@ void display_loop_page_2_left_side() {
   update_upper_slider_value();
   update_lower_slider_value();
   update_switches_page_2_left();
-  display_temperature();
 
   // UPDATE SWITCH:
 }
@@ -767,21 +767,23 @@ void display_loop_page_2_left_side() {
 void display_temperature() {
   // TODO: IF TEMPERATURE HAS CHANGED MORE THAN ONE DEGREE, UPDATE:
   if (nex_prev_current_temperature != get_temperature()) {
-    // display_text_in_field("t=" + String(get_temperature()), "t2");
-    nex_prev_current_temperature = get_temperature();
+    if (temperature_update_delay.delay_time_is_up(500)) {
+      display_text_in_field("t=" + String(get_temperature()), "t10");
+      nex_prev_current_temperature = get_temperature();
+    }
   }
 }
 
 void update_upper_slider_value() {
   if (counter.get_value(cycle_duration) != nex_cycle_duration) {
-    display_text_in_field(add_suffix_to_eeprom_value(cycle_duration, "mm"), "t2");
+    display_text_in_field(add_suffix_to_eeprom_value(cycle_duration, "s"), "t24");
     nex_cycle_duration = counter.get_value(cycle_duration);
   }
 }
 void update_lower_slider_value() {
-  if (counter.get_value(empty_slider_2) != nex_empty_slider_2) {
-    display_text_in_field(add_suffix_to_eeprom_value(empty_slider_2, "mm"), "t2");
-    nex_empty_slider_2 = counter.get_value(empty_slider_2);
+  if (counter.get_value(max_temperature) != nex_max_temperature) {
+    display_text_in_field(add_suffix_to_eeprom_value(max_temperature, " C"), "t22");
+    nex_max_temperature = counter.get_value(max_temperature);
   }
 }
 String add_suffix_to_eeprom_value(int eeprom_value_number, String suffix) {
@@ -802,14 +804,14 @@ void display_loop_page_2_right_side() {
 
 void update_upper_counter_value() {
   if (nex_longtime_counter != counter.get_value(longtime_counter)) {
-    display_text_in_field(String(counter.get_value(longtime_counter)), "t10");
+    display_text_in_field(String(counter.get_value(longtime_counter)), "t20");
     nex_longtime_counter = counter.get_value(longtime_counter);
   }
 }
 void update_lower_counter_value() {
   // UPDATE LOWER COUNTER:
   if (nex_shorttime_counter != counter.get_value(shorttime_counter)) {
-    display_text_in_field(String(counter.get_value(shorttime_counter)), "t12");
+    display_text_in_field(String(counter.get_value(shorttime_counter)), "t21");
     nex_shorttime_counter = counter.get_value(shorttime_counter);
   }
 }
@@ -833,6 +835,7 @@ class Luft_ablassen : public Cycle_step {
     vent_sledge();
     pressure_low = false;
     cycle_step_delay.set_unstarted();
+    cycle_start_millis = millis();
   }
   void do_loop_stuff() {
     if (measure_force() < 1000) {
@@ -1091,8 +1094,14 @@ class Tool_wippe_auf : public Cycle_step {
 // PAUSE
 class Tool_pause : public Cycle_step {
   String get_display_text() { return "PAUSE"; }
+  unsigned long cycle_time_elapsed; // [ms]
+  unsigned long cycle_time_remaining; // [ms]
 
-  void do_initial_stuff() { cycle_step_delay.set_unstarted(); }
+  void do_initial_stuff() {
+    cycle_step_delay.set_unstarted();
+    cycle_time_elapsed = millis() - cycle_start_millis;
+    cycle_time_remaining = counter.get_value(cycle_duration) * 1000 - cycle_time_elapsed;
+  }
   void do_loop_stuff() {
     static int previous_timeout_time = 0;
     int timeout_time = cycle_step_delay.get_remaining_delay_time() / 1000;
@@ -1101,7 +1110,7 @@ class Tool_pause : public Cycle_step {
       previous_timeout_time = timeout_time;
     }
 
-    if (cycle_step_delay.delay_time_is_up(12000)) {
+    if (cycle_step_delay.delay_time_is_up(cycle_time_remaining)) {
       set_loop_completed();
     }
   }
@@ -1243,7 +1252,7 @@ void monitor_machine_stopped_error_timeout() {
 }
 
 void monitor_temperature_error() {
-  if (get_temperature() > 60) {
+  if (get_temperature() > counter.get_value(max_temperature)) {
     state_controller.set_machine_stop();
     state_controller.set_error_mode(true);
     send_email_machine_stopped();
@@ -1277,9 +1286,10 @@ void run_step_or_auto_mode() {
     main_cycle_steps[state_controller.get_current_step()]->do_stuff();
   }
 
-  // MONITOR "MACHINE STOPPED ERROR TIMEOUT":
+  // MONITOR ERRORS WHEN RIG IS RUNNING IN AUTO MODE:
   if (state_controller.machine_is_running() && state_controller.is_in_auto_mode()) {
     monitor_machine_stopped_error_timeout();
+    monitor_temperature_error();
   }
 
   // MEASURE AND DISPLAY PRESSURE
