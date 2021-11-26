@@ -385,12 +385,6 @@ float calculate_temperature_from_adc(float sensor_adc_value) {
   return int(temperature);
 }
 
-int measure_temperature() {
-  float sensor_adc_value = analogRead(PRESSURE_SENSOR_PIN);
-  int force = calculate_pressure_from_adc(sensor_adc_value);
-  return force;
-}
-
 int get_temperature() {
   float sensor_value = analogRead(TEMP_SENSOR_PIN);
   int temperature = calculate_temperature_from_adc(sensor_value);
