@@ -1175,6 +1175,7 @@ void monitor_emergency_signal() {
     state_controller.set_step_mode(); // deactivates cooling air
     cylinder_kuehlluft.set(0);
     reset_machine();
+    show_info_field();
     display_text_in_info_field("NOT AUS AKTIV");
     power_off_electrocylinder();
     delay(1500); // wait for hydraulic cylinders to move back
