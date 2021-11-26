@@ -394,9 +394,9 @@ int get_temperature() {
 
 void display_temperature() {
   // TODO: IF TEMPERATURE HAS CHANGED MORE THAN ONE DEGREE, UPDATE:
-  if (nex_prev_current_temperature != get_temperature()) {
+  if (nex_prev_current_temperature != get_temperature() && nex_current_page == 1) {
     if (temperature_update_delay.delay_time_is_up(500)) {
-      display_text_in_field("t=" + String(get_temperature()), "t10");
+      display_text_in_field("t = " + String(get_temperature()) + " C", "t10");
       nex_prev_current_temperature = get_temperature();
     }
   }
@@ -512,7 +512,8 @@ void button_reset_cycle_push(void *ptr) {
   reset_flag_of_current_step();
   set_initial_cylinder_states();
   state_controller.set_reset_mode(true);
-  clear_text_field("t4");
+  clear_text_field("t4"); // info field
+  clear_text_field("t10"); // temperature field
   hide_info_field();
 }
 
@@ -530,18 +531,7 @@ void switch_nachklemme_push(void *ptr) {
   cylinder_nachklemme.toggle();
   nex_state_nachklemme = !nex_state_nachklemme;
 }
-// void button_spanntaste_push(void *ptr) { //
-//   cylinder_spanntaste.set(1);
-// }
-// void button_spanntaste_pop(void *ptr) { //
-//   cylinder_spanntaste.set(0);
-// }
-// void button_crimptaste_push(void *ptr) { //
-//   cylinder_crimptaste.set(1);
-// }
-// void button_crimptaste_pop(void *ptr) { //
-//   cylinder_crimptaste.set(0);
-// }
+
 void switch_entlueften_push(void *ptr) {
   cylinder_schlittenabluft.toggle();
   nex_state_schlittenabluft = !nex_state_schlittenabluft;
@@ -701,7 +691,6 @@ void nextion_display_loop() {
 void display_loop_page_1_left_side() {
 
   update_cycle_name();
-  display_temperature();
 
   // UPDATE SWITCHSTATE "STEP"/"AUTO"-MODE:
   if (nex_state_step_mode != state_controller.is_in_step_mode()) {
@@ -1335,6 +1324,9 @@ void loop() {
 
   // MONITOR EMERGENCY SIGNAL:
   monitor_emergency_signal();
+
+  // MEASURE AND DISPLAY MOTOR TEMPERATURE
+  display_temperature();
 
   // CONTROL COOLING AIR
   cylinder_kuehlluft.set(state_controller.is_in_auto_mode());
