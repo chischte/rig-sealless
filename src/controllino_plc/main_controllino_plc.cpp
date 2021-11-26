@@ -998,7 +998,7 @@ class Messer_auf : public Cycle_step {
   }
   void do_loop_stuff() {
     cylinder_messer.set(0);
-    if (cycle_step_delay.delay_time_is_up(10)) {
+    if (cycle_step_delay.delay_time_is_up(500)) {
       set_loop_completed();
     }
   }
