@@ -52,6 +52,7 @@ void decrease_slider_value(int eeprom_value_number);
 void update_field_values_page_2();
 void show_info_field();
 void display_temperature();
+void display_text_in_field(String text, String textField);
 String get_main_cycle_display_string();
 String add_suffix_to_eeprom_value(int eeprom_value_number, String suffix);
 
@@ -293,6 +294,8 @@ void block_sledge() {
   cylinder_schlittenabluft.set(1);
 }
 
+// MEASURE AND DISPLAY FORCE ****************************************************
+
 void display_force(int force) {
   if (nex_current_page == 1) {
     show_info_field();
@@ -314,7 +317,7 @@ float calculate_pressure_from_adc(float sensor_adc_value) {
   return int(float_force);
 }
 
-int measure_force() {
+int get_force() {
   float sensor_adc_value = analogRead(PRESSURE_SENSOR_PIN);
   int force = calculate_pressure_from_adc(sensor_adc_value);
   return force;
@@ -325,7 +328,7 @@ void measure_and_display_max_force() {
   static int max_force;
   static int previous_max_force;
 
-  int force = measure_force();
+  int force = get_force();
 
   // Stop timers when force is rising:
   if (force > max_force) {
@@ -360,7 +363,7 @@ void measure_and_display_max_force() {
 }
 
 void measure_and_display_current_force() {
-  int force = measure_force();
+  int force = get_force();
   static int previous_force;
   static int min_difference = 50;
 
@@ -370,16 +373,39 @@ void measure_and_display_current_force() {
   }
 }
 
-int get_temperature() {
-  const float voltsPerUnit = 0.03; // DATASHEET
-  const float maxVoltage = 10;
-  const float maxSensorTemp = 200;
-  float sensorValue = analogRead(TEMP_SENSOR_PIN);
-  float sensorVoltage = sensorValue * voltsPerUnit;
-  float temperature = sensorVoltage / maxVoltage * maxSensorTemp;
-  int temperatureInt = temperature;
+// MEASURE AND DISPLAY TEMPERATURE *********************************************
 
-  return temperatureInt;
+float calculate_temperature_from_adc(float sensor_adc_value) {
+  const float volts_per_unit = 0.03; // controllino datasheet
+  const float max_sensor_voltage = 10; // min voltage = 0 V
+  const float max_sensor_temp = 200; // range @ WAGO 857-810: 0-200°C
+
+  float sensor_voltage = sensor_adc_value * volts_per_unit;
+  float temperature = sensor_voltage / max_sensor_voltage * max_sensor_temp;
+  return int(temperature);
+}
+
+int measure_temperature() {
+  float sensor_adc_value = analogRead(PRESSURE_SENSOR_PIN);
+  int force = calculate_pressure_from_adc(sensor_adc_value);
+  return force;
+}
+
+int get_temperature() {
+  float sensor_value = analogRead(TEMP_SENSOR_PIN);
+  int temperature = calculate_temperature_from_adc(sensor_value);
+
+  return temperature;
+}
+
+void display_temperature() {
+  // TODO: IF TEMPERATURE HAS CHANGED MORE THAN ONE DEGREE, UPDATE:
+  if (nex_prev_current_temperature != get_temperature()) {
+    if (temperature_update_delay.delay_time_is_up(500)) {
+      display_text_in_field("t=" + String(get_temperature()), "t10");
+      nex_prev_current_temperature = get_temperature();
+    }
+  }
 }
 
 // NEXTION GENERAL DISPLAY FUNCTIONS *******************************************
@@ -764,16 +790,6 @@ void display_loop_page_2_left_side() {
   // UPDATE SWITCH:
 }
 
-void display_temperature() {
-  // TODO: IF TEMPERATURE HAS CHANGED MORE THAN ONE DEGREE, UPDATE:
-  if (nex_prev_current_temperature != get_temperature()) {
-    if (temperature_update_delay.delay_time_is_up(500)) {
-      display_text_in_field("t=" + String(get_temperature()), "t10");
-      nex_prev_current_temperature = get_temperature();
-    }
-  }
-}
-
 void update_upper_slider_value() {
   if (counter.get_value(cycle_duration) != nex_cycle_duration) {
     display_text_in_field(add_suffix_to_eeprom_value(cycle_duration, "s"), "t24");
@@ -838,7 +854,7 @@ class Luft_ablassen : public Cycle_step {
     cycle_start_millis = millis();
   }
   void do_loop_stuff() {
-    if (measure_force() < 1000) {
+    if (get_force() < 1000) {
       pressure_low = true;
     }
 
