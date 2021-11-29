@@ -13,17 +13,29 @@ const byte CLAMP_POWER_PIN3 = A3;
 const byte CLAMP_POWER_PIN4 = A4;
 const byte CLAMP_POWER_PIN5 = A5;
 
-// CREATE OBJECTS
+// CREATE OBJECTS --------------------------------------------------------------
 Insomnia status_print_delay;
+Insomnia adc_calibration_delay;
 Insomnia current_clamp_reset_timeout(12L * 60 * 1000); // 12 minutes
 
+// STORE PEAK VALUES:
 RunningMedian currents_median_cache = RunningMedian(10);
+
+// STORE VALUES FOR ADC AUTO CALIBRATION:
+int adc_calibration_value = 0;
+bool calibration_completed = false;
 
 // VARIOUS FUNCTIONS -----------------------------------------------------------
 
-float get_amps_from_clamp() {
+float calculate_amps_from_adc(int adc_value) {
   // Measured: 40A = analog read 88
-  float amps = float(analogRead(CURRENT_CLAMP_IN)) * 40.0 / 88.0;
+  float amps = float(adc_value) * 40.0 / 88.0;
+  return amps;
+}
+
+float get_amps_from_clamp() {
+  int autocalibrated_adc = analogRead(CURRENT_CLAMP_IN) - adc_calibration_value;
+  float amps = calculate_amps_from_adc(autocalibrated_adc);
   return amps;
 }
 
@@ -38,8 +50,8 @@ void print_device_status() {
 }
 
 bool current_is_over_threshold(float current) {
-  const float cycle_start_threshold = 6.0; // [A]
-  const float cycle_stop_threshold = 2.0; //  [A]
+  const float cycle_start_threshold = 10.0; // [A]
+  const float cycle_stop_threshold = cycle_start_threshold / 2;
   static bool current_is_over_threshold = false;
 
   if (current > cycle_start_threshold) {
@@ -80,6 +92,45 @@ void monitor_current_clamp_timeout() {
       reset_current_clamp();
       current_clamp_reset_timeout.reset_time();
     }
+  }
+}
+
+// AUTOCALIBRATE CLAMP ---------------------------------------------------------
+// Measures current a few times per tool cycle
+// The lowest value is used to calibrate the clamp
+
+void set_min_value_for_calibration(int adc_samples[], int array_size) {
+  adc_calibration_value = 1111;
+
+  for (int i = 0; i < array_size; i++) {
+    if (adc_samples[i] < adc_calibration_value) {
+      adc_calibration_value = adc_samples[i];
+    }
+  }
+  Serial.print("ADC CALIBRATION VALUE: ");
+  Serial.println(adc_calibration_value);
+}
+
+void autocalibrate_clamp() {
+  // Define time and frequency for calibration:
+  const unsigned long calibration_time = 20; // [s]
+  const unsigned long sample_time = 500; // [ms]
+  const int no_of_samples = int(1000L * calibration_time / sample_time);
+
+  static int adc_samples[no_of_samples];
+  static int current_store_slot = 0;
+
+  // Make measurements:
+  if (adc_calibration_delay.delay_time_is_up(sample_time)) {
+    adc_samples[current_store_slot] = analogRead(CURRENT_CLAMP_IN);
+    current_store_slot++;
+  }
+
+  // Use lowest measured value to calibrate:
+  if (current_store_slot == no_of_samples) {
+    current_store_slot = 0;
+    set_min_value_for_calibration(adc_samples, no_of_samples);
+    calibration_completed = true;
   }
 }
 
@@ -132,9 +183,13 @@ void setup() {
 
 void loop() {
 
-  log_max_current();
-
   print_device_status();
+
+  autocalibrate_clamp();
+
+  if (calibration_completed) {
+    log_max_current();
+  }
 
   monitor_current_clamp_timeout();
 
