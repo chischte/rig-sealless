@@ -50,7 +50,7 @@ void print_device_status() {
 }
 
 bool current_is_over_threshold(float current) {
-  const float cycle_start_threshold = 10.0; // [A]
+  const float cycle_start_threshold = 20.0; // [A]
   const float cycle_stop_threshold = cycle_start_threshold / 2;
   static bool current_is_over_threshold = false;
 
@@ -107,7 +107,7 @@ void set_min_value_for_calibration(int adc_samples[], int array_size) {
       adc_calibration_value = adc_samples[i];
     }
   }
-  Serial.print("ADC CALIBRATION VALUE: ");
+  Serial.print("MIN ADC VALUE: ");
   Serial.println(adc_calibration_value);
 }
 
