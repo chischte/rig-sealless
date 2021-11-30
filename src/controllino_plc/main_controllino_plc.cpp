@@ -1018,6 +1018,15 @@ class Tool_wippe_zu : public Cycle_step {
   }
 };
 
+// FÖRDERKLEMME SCHLIESSEN
+
+// MIT FÖRDERZYLINDER AKTIV SPANNEN UM BOGEN ZU VERMEIDEN
+class Aktiv_spannen : public Cycle_step {
+  String get_display_text() { return "AKTIV SPANNEN"; }
+  void do_initial_stuff() { foerderzylinder_foerdern(); }
+  void do_loop_stuff() { set_loop_completed(); }
+};
+
 // GERÄT SPANNEN
 class Tool_spannen : public Cycle_step {
   String get_display_text() { return "TOOL SPANNEN"; }
@@ -1062,6 +1071,10 @@ class Nachklemme_zu : public Cycle_step {
     }
   }
 };
+
+// FÖRDERKLEMME ÖFFNEN
+
+// FÖRDERZYLINDER ZURÜCK
 
 // GERÄT CRIMPEN
 class Tool_crimp : public Cycle_step {
@@ -1210,8 +1223,12 @@ void setup() {
   main_cycle_steps.push_back(new Foerderzylinder_zurueck);
   main_cycle_steps.push_back(new Messer_auf);
   main_cycle_steps.push_back(new Tool_wippe_zu);
+  main_cycle_steps.push_back(new Foerderklemme_zu);//NEU
+  main_cycle_steps.push_back(new Aktiv_spannen);//NEU
   main_cycle_steps.push_back(new Tool_spannen);
   main_cycle_steps.push_back(new Nachklemme_zu);
+  main_cycle_steps.push_back(new Foerdereinheit_auf);//NEU
+  main_cycle_steps.push_back(new Foerderzylinder_zurueck);//NEU
   main_cycle_steps.push_back(new Tool_crimp);
   main_cycle_steps.push_back(new Tool_wippe_auf);
   main_cycle_steps.push_back(new Tool_pause);
