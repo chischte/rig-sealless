@@ -242,6 +242,7 @@ void vent_sledge() {
 }
 
 void set_initial_cylinder_states() {
+  cylinder_hydraulik_pressure.set(1);
   cylinder_messer.set(0);
   cylinder_schlittenzuluft.set(0);
   cylinder_schlittenabluft.set(0);
@@ -1262,6 +1263,7 @@ void monitor_machine_stopped_error_timeout() {
   if (machine_stopped_error_timeout.has_timed_out()) {
     state_controller.set_machine_stop();
     state_controller.set_error_mode(true);
+    cylinder_hydraulik_pressure.set(0);
     send_email_machine_stopped();
     show_info_field();
     display_text_in_info_field("TIMEOUT ERROR");
@@ -1272,6 +1274,7 @@ void monitor_temperature_error() {
   if (get_temperature() > counter.get_value(max_temperature)) {
     state_controller.set_machine_stop();
     state_controller.set_error_mode(true);
+    cylinder_hydraulik_pressure.set(0);
     send_email_machine_stopped();
     show_info_field();
     display_text_in_info_field("TEMPERATURE ERROR");

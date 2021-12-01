@@ -10,7 +10,7 @@ const byte CURRENT_CLAMP_IN = A0;
 Insomnia status_print_delay;
 
 // STORE PEAK VALUES:
-RunningMedian currents_median_cache = RunningMedian(100);
+RunningMedian currents_median_cache = RunningMedian(20);
 
 // VARIOUS FUNCTIONS -----------------------------------------------------------
 
@@ -98,7 +98,7 @@ void loop() {
 
   log_max_current();
 
-  delay(1); // reduce number of measurments
+  // delayMicroseconds(100); // reduce number of measurments
 
   //Serial.println(get_amps_from_clamp(), 2); // For debug and calibration
 }
