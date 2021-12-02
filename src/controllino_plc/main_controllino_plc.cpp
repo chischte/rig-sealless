@@ -93,7 +93,7 @@ const byte TEMP_SENSOR_PIN = CONTROLLINO_A2;
 Cylinder cylinder_kuehlluft(CONTROLLINO_D13);
 Cylinder cylinder_schlittenzuluft(CONTROLLINO_D4);
 Cylinder cylinder_schlittenabluft(CONTROLLINO_R8);
-// Cylinder cylinder_auswerfer(CONTROLLINO_D3);
+Cylinder cylinder_auswerfer(CONTROLLINO_D3);
 Cylinder cylinder_spanntaste(CONTROLLINO_D5);
 Cylinder cylinder_crimptaste(CONTROLLINO_D2);
 Cylinder cylinder_wippenhebel(CONTROLLINO_D0);
@@ -241,7 +241,7 @@ void vent_sledge() {
   cylinder_schlittenabluft.set(0);
 }
 
-void set_initial_cylinder_states() {
+void reset_cylinders() {
   cylinder_hydraulik_pressure.set(1);
   cylinder_messer.set(0);
   cylinder_schlittenzuluft.set(0);
@@ -252,11 +252,12 @@ void set_initial_cylinder_states() {
   cylinder_vorklemme.set(0);
   cylinder_nachklemme.set(0);
   cylinder_crimptaste.set(0);
+  cylinder_auswerfer.set(0);
   foerderzylinder_zurueck();
 }
 
 void stop_machine() {
-  set_initial_cylinder_states();
+  reset_cylinders();
   state_controller.set_step_mode();
   state_controller.set_machine_stop();
 }
@@ -264,7 +265,7 @@ void stop_machine() {
 void reset_machine() {
   state_controller.set_machine_stop();
   state_controller.set_error_mode(false);
-  set_initial_cylinder_states();
+  reset_cylinders();
   clear_text_field("t4");
   hide_info_field();
   state_controller.set_step_mode();
@@ -511,7 +512,7 @@ void button_next_step_push(void *ptr) {
 
 void button_reset_cycle_push(void *ptr) {
   reset_flag_of_current_step();
-  set_initial_cylinder_states();
+  reset_cylinders();
   state_controller.set_reset_mode(true);
   clear_text_field("t4"); // info field
   clear_text_field("t10"); // temperature field
@@ -897,6 +898,17 @@ class Nachklemme_auf : public Cycle_step {
   }
 };
 
+// AUSWERFER BETÄTIGEN
+class Auswerfen : public Cycle_step {
+  String get_display_text() { return "AUSWERFEN"; }
+
+  void do_initial_stuff() {}
+  void do_loop_stuff() {
+    cylinder_auswerfer.set(1);
+    set_loop_completed();
+  }
+};
+
 // FÖRDERKLEMME SCHLIESSEN
 class Foerderklemme_zu : public Cycle_step {
   String get_display_text() { return "FOERDERKLEMME ZU"; }
@@ -985,6 +997,17 @@ class Foerderzylinder_zurueck : public Cycle_step {
     if (cycle_step_delay.delay_time_is_up(10)) {
       set_loop_completed();
     }
+  }
+};
+
+// AUSWERFER ZURÜCK
+class Auswerfer_zurueck : public Cycle_step {
+  String get_display_text() { return "AUSWERFER ZURUECK"; }
+
+  void do_initial_stuff() {}
+  void do_loop_stuff() {
+    cylinder_auswerfer.set(0);
+    set_loop_completed();
   }
 };
 
@@ -1083,7 +1106,7 @@ class Tool_crimp : public Cycle_step {
 
   void do_initial_stuff() { send_log_start_crimping(); }
   void do_loop_stuff() {
-    cylinder_crimptaste.stroke(500, 2200);
+    cylinder_crimptaste.stroke(500, 3000);
     if (cylinder_crimptaste.stroke_completed()) {
       set_loop_completed();
     }
@@ -1114,6 +1137,9 @@ class Tool_pause : public Cycle_step {
     cycle_step_delay.set_unstarted();
     cycle_time_elapsed = millis() - cycle_start_millis;
     cycle_time_remaining = counter.get_value(cycle_duration) * 1000 - cycle_time_elapsed;
+    if (cycle_time_remaining < 0) {
+      cycle_time_remaining = 0;
+    }
   }
   void do_loop_stuff() {
     static int previous_timeout_time = 0;
@@ -1200,7 +1226,7 @@ void monitor_emergency_signal() {
 // MAIN SETUP ******************************************************************
 
 void setup() {
-  set_initial_cylinder_states();
+  reset_cylinders();
   //------------------------------------------------
   // SETUP PIN MODES:
   pinMode(TRENNRELAIS_ZYLINDER_1, OUTPUT);
@@ -1216,20 +1242,22 @@ void setup() {
   main_cycle_steps.push_back(new Vorklemme_auf);
   main_cycle_steps.push_back(new Schlitten_zurueck);
   main_cycle_steps.push_back(new Nachklemme_auf);
+  main_cycle_steps.push_back(new Auswerfen);
   main_cycle_steps.push_back(new Foerderklemme_zu);
   main_cycle_steps.push_back(new Foerdern);
   main_cycle_steps.push_back(new Vorklemme_zu);
   main_cycle_steps.push_back(new Messer_ab);
   main_cycle_steps.push_back(new Foerdereinheit_auf);
   main_cycle_steps.push_back(new Foerderzylinder_zurueck);
+  main_cycle_steps.push_back(new Auswerfer_zurueck);
   main_cycle_steps.push_back(new Messer_auf);
   main_cycle_steps.push_back(new Tool_wippe_zu);
-  main_cycle_steps.push_back(new Foerderklemme_zu);//NEU
-  main_cycle_steps.push_back(new Aktiv_spannen);//NEU
+  main_cycle_steps.push_back(new Foerderklemme_zu); //NEU
+  main_cycle_steps.push_back(new Aktiv_spannen); //NEU
   main_cycle_steps.push_back(new Tool_spannen);
   main_cycle_steps.push_back(new Nachklemme_zu);
-  main_cycle_steps.push_back(new Foerdereinheit_auf);//NEU
-  main_cycle_steps.push_back(new Foerderzylinder_zurueck);//NEU
+  main_cycle_steps.push_back(new Foerdereinheit_auf); //NEU
+  main_cycle_steps.push_back(new Foerderzylinder_zurueck); //NEU
   main_cycle_steps.push_back(new Tool_crimp);
   main_cycle_steps.push_back(new Tool_wippe_auf);
   main_cycle_steps.push_back(new Tool_pause);

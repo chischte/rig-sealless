@@ -27,7 +27,7 @@ float get_amps_from_clamp() {
 }
 
 void print_device_status() {
-  if (status_print_delay.delay_time_is_up(5000)) {
+  if (status_print_delay.delay_time_is_up(10000)) {
     float current = get_amps_from_clamp();
     String status_string = "LOG;CURRENT_LOGGER_RUNNING;";
     status_string += current;
@@ -37,8 +37,8 @@ void print_device_status() {
 }
 
 bool current_is_over_threshold(float current) {
-  const float cycle_start_threshold = 25.0; // [A]
-  const float cycle_stop_threshold = 7; // [A]
+  const float cycle_start_threshold = 30.0; // [A]
+  const float cycle_stop_threshold = 5; // [A]
   static bool current_is_over_threshold = false;
 
   if (current > cycle_start_threshold) {
@@ -99,6 +99,5 @@ void loop() {
   log_max_current();
 
   // delayMicroseconds(100); // reduce number of measurments
-
   //Serial.println(get_amps_from_clamp(), 2); // For debug and calibration
 }
