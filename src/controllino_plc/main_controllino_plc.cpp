@@ -107,13 +107,14 @@ Insomnia nex_reset_button_timeout(10000); // pushtime to reset counter
 Insomnia print_interval_timeout(1000);
 Insomnia erase_force_value_timeout(5000);
 Insomnia log_force_value_timeout(1000);
-Insomnia machine_stopped_error_timeout(25000); // electrocylinder takes up to 20" to find start position
+Insomnia machine_stopped_error_timeout(7000); // electrocylinder takes up to 20" to find start position
 Insomnia pressure_update_delay;
 Insomnia temperature_update_delay;
 Insomnia cycle_step_delay;
 
 // GLOBAL VARIABLES: -----------------------------------------------------------
 unsigned long cycle_start_millis = millis();
+char reset_count = 0; // to monitor how many resets have been made
 
 // LOGS AND EMAILS: ------------------------------------------------------------
 
@@ -156,7 +157,7 @@ NexPage nex_page_0 = NexPage(0, 0, "page0");
 NexPage nex_page_1 = NexPage(1, 0, "page1");
 NexButton button_previous_step = NexButton(1, 6, "b1");
 NexButton button_next_step = NexButton(1, 7, "b2");
-NexButton button_reset_cycle = NexButton(1, 5, "b0");
+NexButton button_reset_rig = NexButton(1, 5, "b0");
 NexDSButton switch_play_pause = NexDSButton(1, 3, "bt0");
 NexDSButton switch_step_auto_mode = NexDSButton(1, 4, "bt1");
 // PAGE 1 - RIGHT SIDE ---------------------------------------------------------
@@ -184,7 +185,7 @@ NexTouch *nex_listen_list[] = { //
     // PAGE 0:
     &nex_page_0,
     // PAGE 1 LEFT:
-    &nex_page_1, &button_previous_step, &button_next_step, &button_reset_cycle, &switch_play_pause,
+    &nex_page_1, &button_previous_step, &button_next_step, &button_reset_rig, &switch_play_pause,
     &switch_step_auto_mode,
     // PAGE 1 RIGHT:
     &button_schneiden, &switch_vorklemme, &switch_nachklemme, &switch_wippenhebel, &switch_entlueften,
@@ -265,13 +266,15 @@ void stop_machine() {
 void reset_machine() {
   state_controller.set_machine_stop();
   state_controller.set_error_mode(false);
+  reset_flag_of_current_step();
+  state_controller.set_current_step_to(0);
+  reset_flag_of_current_step();
   reset_cylinders();
   clear_text_field("t4");
   hide_info_field();
-  state_controller.set_step_mode();
-  reset_flag_of_current_step();
-  state_controller.set_current_step_to(0);
-  state_controller.set_reset_mode(false);
+  cylinder_wippenhebel.set(1);
+  delay(500);
+  cylinder_wippenhebel.set(0);
 }
 
 unsigned long calculate_feedtime_from_mm(long mm) {
@@ -397,6 +400,7 @@ int get_temperature() {
 void display_temperature() {
   // TODO: IF TEMPERATURE HAS CHANGED MORE THAN ONE DEGREE, UPDATE:
   if (nex_prev_current_temperature != get_temperature() && nex_current_page == 1) {
+
     if (temperature_update_delay.delay_time_is_up(500)) {
       display_text_in_field("t = " + String(get_temperature()) + " C", "t10");
       nex_prev_current_temperature = get_temperature();
@@ -510,12 +514,10 @@ void button_next_step_push(void *ptr) {
   reset_flag_of_current_step();
 }
 
-void button_reset_cycle_push(void *ptr) {
-  reset_flag_of_current_step();
-  reset_cylinders();
+void button_reset_rig_push(void *ptr) {
   state_controller.set_reset_mode(true);
+  state_controller.set_run_after_reset(0);
   clear_text_field("t4"); // info field
-  clear_text_field("t10"); // temperature field
   hide_info_field();
 }
 
@@ -627,7 +629,7 @@ void attach_push_and_pop() {
   nex_page_1.attachPush(page_1_push);
   button_previous_step.attachPush(button_stepback_push);
   button_next_step.attachPush(button_next_step_push);
-  button_reset_cycle.attachPush(button_reset_cycle_push);
+  button_reset_rig.attachPush(button_reset_rig_push);
   button_previous_step.attachPush(button_stepback_push);
   button_next_step.attachPush(button_next_step_push);
   switch_play_pause.attachPush(switch_play_pause_push);
@@ -928,9 +930,14 @@ class Foerderklemme_zu : public Cycle_step {
 class Foerdern : public Cycle_step {
   String get_display_text() { return "FOERDERN"; }
 
-  void do_initial_stuff() { foerderzylinder_foerdern(); }
+  void do_initial_stuff() {
+    foerderzylinder_foerdern();
+    machine_stopped_error_timeout.set_time(25000);
+  }
   void do_loop_stuff() {
     if (sensor_foerderzylinder_in.switched_high()) {
+      machine_stopped_error_timeout.reset_time();
+      machine_stopped_error_timeout.set_time(7000);
       set_loop_completed();
     }
   }
@@ -1123,6 +1130,7 @@ class Tool_wippe_auf : public Cycle_step {
     counter.count_one_up(longtime_counter);
     send_log_cycle_total(counter.get_value(longtime_counter));
     cylinder_wippenhebel.set(1);
+    reset_count = 0;
   }
   void do_loop_stuff() { set_loop_completed(); }
 };
@@ -1148,10 +1156,12 @@ class Tool_pause : public Cycle_step {
     }
   }
   void do_loop_stuff() {
+    machine_stopped_error_timeout.reset_time();
+
     static int previous_timeout_time = 0;
     int timeout_time = cycle_step_delay.get_remaining_delay_time() / 1000;
     if (timeout_time != previous_timeout_time) {
-      display_text_in_field(String(timeout_time), "t0");
+      display_text_in_field("PAUSE " + String(timeout_time), "t0");
       previous_timeout_time = timeout_time;
     }
 
@@ -1295,12 +1305,40 @@ void setup() {
 
 void monitor_machine_stopped_error_timeout() {
   if (machine_stopped_error_timeout.has_timed_out()) {
-    state_controller.set_machine_stop();
-    state_controller.set_error_mode(true);
-    cylinder_hydraulik_pressure.set(0);
-    send_email_machine_stopped();
     show_info_field();
-    display_text_in_info_field("TIMEOUT ERROR");
+    display_text_in_info_field("STOPPED ...");
+    delay(2000);
+    machine_stopped_error_timeout.reset_time();
+
+    if (reset_count == 0) {
+      // Reset and restart:
+      show_info_field();
+      display_text_in_info_field("RESET 1");
+      delay(2000);
+      reset_count++;
+      state_controller.set_reset_mode(1);
+      state_controller.set_run_after_reset(1);
+    }
+
+    else if (reset_count == 1) {
+      // Reset and restart:
+      show_info_field();
+      display_text_in_info_field("RESET 2");
+      delay(2000);
+      reset_count++;
+      state_controller.set_reset_mode(1);
+      state_controller.set_run_after_reset(1);
+    }
+
+    else if (reset_count == 2) {
+      // Stop and show error:
+      state_controller.set_machine_stop();
+      state_controller.set_error_mode(true);
+      cylinder_hydraulik_pressure.set(0);
+      send_email_machine_stopped();
+      show_info_field();
+      display_text_in_info_field("TIMEOUT ERROR");
+    }
   }
 }
 
@@ -1340,12 +1378,6 @@ void run_step_or_auto_mode() {
     main_cycle_steps[state_controller.get_current_step()]->do_stuff();
   }
 
-  // MONITOR ERRORS WHEN RIG IS RUNNING IN AUTO MODE:
-  if (state_controller.machine_is_running() && state_controller.is_in_auto_mode()) {
-    monitor_machine_stopped_error_timeout();
-    monitor_temperature_error();
-  }
-
   // MEASURE AND DISPLAY PRESSURE
   if (!state_controller.is_in_error_mode()) {
     measure_and_display_max_force();
@@ -1353,6 +1385,17 @@ void run_step_or_auto_mode() {
 }
 
 void rig_active_loop() {
+
+  // DO NOT WATCH TIMEOUT IF MACHINE IS IN NOT AUTO-RUNNING MODE:
+  if (!state_controller.machine_is_running() || !state_controller.is_in_auto_mode()) {
+    machine_stopped_error_timeout.reset_time();
+  }
+
+  // MONITOR ERRORS WHEN RIG IS RUNNING IN AUTO MODE:
+  if (state_controller.machine_is_running() && state_controller.is_in_auto_mode()) {
+    monitor_machine_stopped_error_timeout();
+    monitor_temperature_error();
+  }
 
   // UPDATE DISPLAY:
   nextion_display_loop();
@@ -1365,6 +1408,14 @@ void rig_active_loop() {
   // RESET RIG IF RESET IS ACTIVATED:
   if (state_controller.reset_mode_is_active()) {
     reset_machine();
+    state_controller.set_reset_mode(0);
+
+    if (state_controller.run_after_reset_is_active()) {
+      state_controller.set_auto_mode();
+      state_controller.set_machine_running();
+    } else {
+      state_controller.set_step_mode();
+    }
   }
 
   // DISPLAY DEBUG INFOMATION:
