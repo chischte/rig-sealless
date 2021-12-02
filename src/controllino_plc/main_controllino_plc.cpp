@@ -1130,14 +1130,20 @@ class Tool_wippe_auf : public Cycle_step {
 // PAUSE
 class Tool_pause : public Cycle_step {
   String get_display_text() { return "PAUSE"; }
-  unsigned long cycle_time_elapsed; // [ms]
+  unsigned long cycle_duration_millis;
+  unsigned long cycle_time_elapsed;
   unsigned long cycle_time_remaining; // [ms]
 
   void do_initial_stuff() {
     cycle_step_delay.set_unstarted();
+
+    cycle_duration_millis = counter.get_value(cycle_duration) * 1000;
     cycle_time_elapsed = millis() - cycle_start_millis;
-    cycle_time_remaining = counter.get_value(cycle_duration) * 1000 - cycle_time_elapsed;
-    if (cycle_time_remaining < 0) {
+
+    // Calculate delay time:
+    if (cycle_duration_millis > cycle_time_elapsed) {
+      cycle_time_remaining = cycle_duration_millis - cycle_time_elapsed;
+    } else {
       cycle_time_remaining = 0;
     }
   }
@@ -1252,12 +1258,12 @@ void setup() {
   main_cycle_steps.push_back(new Auswerfer_zurueck);
   main_cycle_steps.push_back(new Messer_auf);
   main_cycle_steps.push_back(new Tool_wippe_zu);
-  main_cycle_steps.push_back(new Foerderklemme_zu); //NEU
-  main_cycle_steps.push_back(new Aktiv_spannen); //NEU
+  main_cycle_steps.push_back(new Foerderklemme_zu);
+  main_cycle_steps.push_back(new Aktiv_spannen);
   main_cycle_steps.push_back(new Tool_spannen);
   main_cycle_steps.push_back(new Nachklemme_zu);
-  main_cycle_steps.push_back(new Foerdereinheit_auf); //NEU
-  main_cycle_steps.push_back(new Foerderzylinder_zurueck); //NEU
+  main_cycle_steps.push_back(new Foerdereinheit_auf);
+  main_cycle_steps.push_back(new Foerderzylinder_zurueck);
   main_cycle_steps.push_back(new Tool_crimp);
   main_cycle_steps.push_back(new Tool_wippe_auf);
   main_cycle_steps.push_back(new Tool_pause);

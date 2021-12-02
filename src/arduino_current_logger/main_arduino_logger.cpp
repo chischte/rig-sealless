@@ -37,7 +37,7 @@ void print_device_status() {
 }
 
 bool current_is_over_threshold(float current) {
-  const float cycle_start_threshold = 30.0; // [A]
+  const float cycle_start_threshold = 35.0; // [A]
   const float cycle_stop_threshold = 5; // [A]
   static bool current_is_over_threshold = false;
 
