@@ -91,7 +91,7 @@ class graph_creator():
         ticks_timestamp_array = []
         ticks_index_array = []
         index = 0
-        resolution = 100
+        resolution = 1000
         counter = 0
         for ts in df['TIMESTAMP']:
             if counter == 0:
@@ -117,13 +117,15 @@ class graph_creator():
         ax_f_tens.plot(f_tens_array, color=col_green)
         ax_f_tens.legend(['Tensioning Force [N]'], loc='upper center')
         ax_f_tens.set_xlim(left=0)
-        ax_f_tens.set_xticks([])
+        # ax_f_tens.set_xticks([])
+        ax_f_tens.set_xticks(ticks_index_array)
         ax_f_tens.set_ylim(bottom=0, top=6000)
 
         ax_i_tens.plot(i_tens_array, color=col_yellow)
         ax_i_tens.legend(['Tensioning Current [A]'], loc='upper center')
         ax_i_tens.set_xlim(left=0)
-        ax_i_tens.set_xticks([])
+        # ax_i_tens.set_xticks([])
+        ax_i_tens.set_xticks(ticks_index_array)
         ax_i_tens.set_ylim(bottom=15, top=65)
         # ax_i_tens.set_yticks([20, 30, 40, 50, 60])
 
@@ -131,25 +133,26 @@ class graph_creator():
         # ax_i_crimp.plot(i_crimp_array)
         ax_i_crimp.legend(['Crimping Current [A]'], loc='upper center')
         ax_i_crimp.set_xlim(left=0)
-        ax_i_crimp.set_xticks([])
+        # ax_i_crimp.set_xticks([])
+        ax_i_crimp.set_xticks(ticks_index_array)
         ax_i_crimp.set_ylim(bottom=15, top=65)
         # ax_i_crimp.set_yticks([20, 30, 40, 50, 60])
 
         ax_n_count.plot(n_reset_count_array, color=col_purple)
         ax_n_count.legend(['Cycles Reset'], loc='upper center')
         ax_n_count.set_xlim(left=0)
-        ax_n_count.set_xticks([])
-        # ax_n_count.set_xticks(ticks_index_array)
-        # ax_n_count.set_xticklabels(ticks_timestamp_array, rotation=90)
+        # ax_n_count.set_xticks([])
+        ax_n_count.set_xticks(ticks_index_array)
 
         ax_n_tot_count.plot(n_total_count_array, color=col_yellow)
         ax_n_tot_count.legend(['Cycles Total'], loc='upper center')
         ax_n_tot_count.set_xlim(left=0)
-        ax_n_tot_count.set_xticks([])
+        # ax_n_tot_count.set_xticks([])
         # ax_n_tot_count.set_xticks(ticks_index_array)
+        # ax_n_tot_count.set_xticklabels(ticks_timestamp_array, rotation=90)
 
         plt.tight_layout()  # arrange graphs more compact
-        plt.subplots_adjust(hspace=0.1)  # even more compact
+        plt.subplots_adjust(hspace=0.2)  # even more compact
         plt.show()
 
 
