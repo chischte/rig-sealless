@@ -115,6 +115,7 @@ Insomnia cycle_step_delay;
 // GLOBAL VARIABLES: -----------------------------------------------------------
 unsigned long cycle_start_millis = millis();
 char reset_count = 0; // to monitor how many resets have been made
+char cut_count = 0; // only cut strap every n times
 
 // LOGS AND EMAILS: ------------------------------------------------------------
 
@@ -967,9 +968,18 @@ class Messer_ab : public Cycle_step {
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    cylinder_messer.set(1);
-    if (cycle_step_delay.delay_time_is_up(600)) {
-      set_loop_completed();
+
+    if (cut_count == 4) {
+      cylinder_messer.set(1);
+      if (cycle_step_delay.delay_time_is_up(600)) {
+        cut_count = 0;
+        set_loop_completed();
+      }
+    } else {
+      if (cycle_step_delay.delay_time_is_up(600)) {
+        cut_count++;
+        set_loop_completed();
+      }
     }
   }
 };
@@ -1386,12 +1396,12 @@ void run_step_or_auto_mode() {
 
 void rig_active_loop() {
 
-  // DO NOT WATCH TIMEOUT IF MACHINE IS IN NOT AUTO-RUNNING MODE:
-  if (!state_controller.machine_is_running() || !state_controller.is_in_auto_mode()) {
+  // DO NOT WATCH TIMEOUT IF MACHINE IS NOT RUNNING (PAUSE):
+  if (!state_controller.machine_is_running()) {
     machine_stopped_error_timeout.reset_time();
   }
 
-  // MONITOR ERRORS WHEN RIG IS RUNNING IN AUTO MODE:
+  // MONITOR ERRORS ONLY WHEN RIG IS RUNNING IN AUTO MODE:
   if (state_controller.machine_is_running() && state_controller.is_in_auto_mode()) {
     monitor_machine_stopped_error_timeout();
     monitor_temperature_error();
@@ -1405,7 +1415,7 @@ void rig_active_loop() {
     run_step_or_auto_mode();
   }
 
-  // RESET RIG IF RESET IS ACTIVATED:
+  // RUN RESET IF RESET IS ACTIVATED:
   if (state_controller.reset_mode_is_active()) {
     reset_machine();
     state_controller.set_reset_mode(0);
