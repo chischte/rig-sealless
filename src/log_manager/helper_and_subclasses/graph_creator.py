@@ -62,28 +62,51 @@ class graph_creator():
         df["TENSION CURRENT"] = df["TENSION CURRENT"].astype(float)
         df["CRIMP CURRENT"] = df["CRIMP CURRENT"].astype(float)
 
+        x_offset = 1031
+
         # CREATE TENSION FORCE VALUES
         f_tens_array = []
+
+        for x in range(x_offset):
+            f_tens_array.append(0)
+
         for ts in df['TENSION FORCE']:
             f_tens_array.append(ts)
 
         # CREATE TENSION CURRENT VALUES
+
         i_tens_array = []
+
+        for x in range(x_offset):
+            i_tens_array.append(0)
+
         for ts in df['TENSION CURRENT']:
             i_tens_array.append(ts)
 
         # CREATE CRIMP CURRENT VALUES
         i_crimp_array = []
+
+        for x in range(x_offset):
+            i_crimp_array.append(0)
+
         for ts in df['CRIMP CURRENT']:
             i_crimp_array.append(ts)
 
         # CREATE CYCLES RESET VALUES
         n_reset_count_array = []
+
+        for x in range(x_offset):
+            n_reset_count_array.append(0)
+
         for ts in df['CYCLES RESET']:
             n_reset_count_array.append(ts)
 
         # CREATE CYCLES TOTAL VALUES
         n_total_count_array = []
+
+        for x in range(x_offset):
+            n_total_count_array.append(0)
+
         for ts in df['CYCLES TOTAL']:
             n_total_count_array.append(ts)
 
@@ -93,6 +116,7 @@ class graph_creator():
         index = 0
         resolution = 1000
         counter = 0
+        # for ts in range(10000):
         for ts in df['TIMESTAMP']:
             if counter == 0:
                 ticks_timestamp_array.append(ts)
@@ -118,14 +142,14 @@ class graph_creator():
         ax_f_tens.legend(['Tensioning Force [N]'], loc='upper center')
         ax_f_tens.set_xlim(left=0)
         # ax_f_tens.set_xticks([])
-        ax_f_tens.set_xticks(ticks_index_array)
+        # ax_f_tens.set_xticks(ticks_index_array)
         ax_f_tens.set_ylim(bottom=0, top=6000)
 
         ax_i_tens.plot(i_tens_array, color=col_yellow)
         ax_i_tens.legend(['Tensioning Current [A]'], loc='upper center')
         ax_i_tens.set_xlim(left=0)
         # ax_i_tens.set_xticks([])
-        ax_i_tens.set_xticks(ticks_index_array)
+        # ax_i_tens.set_xticks(ticks_index_array)
         ax_i_tens.set_ylim(bottom=15, top=65)
         # ax_i_tens.set_yticks([20, 30, 40, 50, 60])
 
@@ -134,7 +158,7 @@ class graph_creator():
         ax_i_crimp.legend(['Crimping Current [A]'], loc='upper center')
         ax_i_crimp.set_xlim(left=0)
         # ax_i_crimp.set_xticks([])
-        ax_i_crimp.set_xticks(ticks_index_array)
+        # ax_i_crimp.set_xticks(ticks_index_array)
         ax_i_crimp.set_ylim(bottom=15, top=65)
         # ax_i_crimp.set_yticks([20, 30, 40, 50, 60])
 
@@ -142,7 +166,7 @@ class graph_creator():
         ax_n_count.legend(['Cycles Reset'], loc='upper center')
         ax_n_count.set_xlim(left=0)
         # ax_n_count.set_xticks([])
-        ax_n_count.set_xticks(ticks_index_array)
+        # ax_n_count.set_xticks(ticks_index_array)
 
         ax_n_tot_count.plot(n_total_count_array, color=col_yellow)
         ax_n_tot_count.legend(['Cycles Total'], loc='upper center')
@@ -152,7 +176,7 @@ class graph_creator():
         # ax_n_tot_count.set_xticklabels(ticks_timestamp_array, rotation=90)
 
         plt.tight_layout()  # arrange graphs more compact
-        plt.subplots_adjust(hspace=0.2)  # even more compact
+        plt.subplots_adjust(hspace=0.16)  # even more compact
         plt.show()
 
 
