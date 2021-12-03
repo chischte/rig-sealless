@@ -125,7 +125,7 @@ class graph_creator():
         ax_i_tens.set_xlim(left=0)
         ax_i_tens.set_xticks([])
         ax_i_tens.set_ylim(bottom=15, top=65)
-        ax_i_tens.set_yticks([20, 30, 40, 50, 60])
+        # ax_i_tens.set_yticks([20, 30, 40, 50, 60])
 
         ax_i_crimp.plot(i_crimp_array, color=col_orange)
         # ax_i_crimp.plot(i_crimp_array)
@@ -133,7 +133,7 @@ class graph_creator():
         ax_i_crimp.set_xlim(left=0)
         ax_i_crimp.set_xticks([])
         ax_i_crimp.set_ylim(bottom=15, top=65)
-        ax_i_crimp.set_yticks([20, 30, 40, 50, 60])
+        # ax_i_crimp.set_yticks([20, 30, 40, 50, 60])
 
         ax_n_count.plot(n_reset_count_array, color=col_purple)
         ax_n_count.legend(['Cycles Reset'], loc='upper center')
