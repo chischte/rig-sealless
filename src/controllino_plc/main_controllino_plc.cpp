@@ -238,6 +238,11 @@ void foerderzylinder_foerdern() {
   digitalWrite(FOERDERZYLINDER_MOVE_IN, HIGH);
 }
 
+void foerderzylinder_stop() {
+  digitalWrite(FOERDERZYLINDER_MOVE_OUT, LOW);
+  digitalWrite(FOERDERZYLINDER_MOVE_IN, LOW);
+}
+
 void vent_sledge() {
   cylinder_schlittenzuluft.set(0);
   cylinder_schlittenabluft.set(0);
@@ -1098,6 +1103,13 @@ class Tool_spannen : public Cycle_step {
   }
 };
 
+// MIT FÖRDERZYLINDER AKTIV SPANNEN UM BOGEN ZU VERMEIDEN
+class Foerderzylinder_stop : public Cycle_step {
+  String get_display_text() { return "FOERDER STOP"; }
+  void do_initial_stuff() { foerderzylinder_stop(); }
+  void do_loop_stuff() { set_loop_completed(); }
+};
+
 // NACHKLEMME SCHLIESSEN
 class Nachklemme_zu : public Cycle_step {
   String get_display_text() { return "NACHKLEMME ZU"; }
@@ -1281,6 +1293,7 @@ void setup() {
   main_cycle_steps.push_back(new Foerderklemme_zu);
   main_cycle_steps.push_back(new Aktiv_spannen);
   main_cycle_steps.push_back(new Tool_spannen);
+  main_cycle_steps.push_back(new Foerderzylinder_stop);
   main_cycle_steps.push_back(new Nachklemme_zu);
   main_cycle_steps.push_back(new Foerdereinheit_auf);
   main_cycle_steps.push_back(new Foerderzylinder_zurueck);
