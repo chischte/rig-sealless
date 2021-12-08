@@ -263,6 +263,10 @@ void reset_cylinders() {
   cylinder_crimptaste.set(0);
   cylinder_auswerfer.set(0);
   foerderzylinder_zurueck();
+  if (!emergency_stop_signal.get_button_state()) {
+    cylinder_hydraulik_pressure.set(1);
+    cylinder_hauptluft.set(1);
+  }
 }
 
 void stop_machine() {
@@ -1253,7 +1257,7 @@ void monitor_emergency_signal() {
     cylinder_hauptluft.set(1);
   }
 
-  // STOP SYSTEM
+  // STOP SYSTEM (LOOP RUNS ONLY ONCE)
   if (emergency_stop_signal.switched_high()) {
     cylinder_hauptluft.set(0);
     state_controller.set_machine_stop();
@@ -1266,9 +1270,11 @@ void monitor_emergency_signal() {
     cylinder_hydraulik_pressure.set(0);
   }
 
-  // KEEP SYSTEM STOPPED
+  // KEEP SYSTEM STOPPED (LOOP KEEPS RUNNING)
   if (emergency_stop_signal.get_button_state()) {
     state_controller.set_machine_stop();
+    cylinder_hydraulik_pressure.set(0);
+    cylinder_hauptluft.set(0);
   }
 }
 
@@ -1332,6 +1338,7 @@ void setup() {
     power_on_electrocylinder();
     cylinder_hydraulik_pressure.set(1);
   }
+
   cylinder_hauptluft.set(1);
   Serial.println("EXIT SETUP");
 }
@@ -1354,6 +1361,7 @@ void monitor_error_timeouts() {
     display_text_in_info_field("STOPPED ...");
     delay(2000);
     machine_stopped_error_timeout.reset_time();
+    bandsensor_timeout.reset_time();
 
     if (reset_count == 0) {
       // Reset and restart:
