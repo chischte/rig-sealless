@@ -62,7 +62,7 @@ class graph_creator():
         df["TENSION CURRENT"] = df["TENSION CURRENT"].astype(float)
         df["CRIMP CURRENT"] = df["CRIMP CURRENT"].astype(float)
 
-        x_offset = 1031
+        x_offset = 1032
 
         # CREATE TENSION FORCE VALUES
         f_tens_array = []

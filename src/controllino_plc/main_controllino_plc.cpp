@@ -79,6 +79,7 @@ Debounce sensor_sledge_endposition(CONTROLLINO_A5);
 Debounce sensor_foerderzylinder_in(CONTROLLINO_A7); // BROWN
 Debounce sensor_foerderzylinder_out(CONTROLLINO_A6); // GREEN
 Debounce emergency_stop_signal(CONTROLLINO_A10); //
+Debounce bandsensor_unten(CONTROLLINO_A1); //
 Debounce email_button(CONTROLLINO_A0); //
 // Bandsensor oben
 // Bansensor unten
@@ -102,12 +103,14 @@ Cylinder cylinder_vorklemme(CONTROLLINO_D15);
 Cylinder cylinder_nachklemme(CONTROLLINO_D14);
 Cylinder cylinder_vorschubklemme(CONTROLLINO_D6);
 Cylinder cylinder_messer(CONTROLLINO_D1);
+Cylinder cylinder_hauptluft(CONTROLLINO_D12);
 
 Insomnia nex_reset_button_timeout(10000); // pushtime to reset counter
 Insomnia print_interval_timeout(1000);
 Insomnia erase_force_value_timeout(5000);
 Insomnia log_force_value_timeout(1000);
 Insomnia machine_stopped_error_timeout(7000); // electrocylinder takes up to 20" to find start position
+Insomnia bandsensor_timeout(60000);
 Insomnia pressure_update_delay;
 Insomnia temperature_update_delay;
 Insomnia cycle_step_delay;
@@ -249,7 +252,6 @@ void vent_sledge() {
 }
 
 void reset_cylinders() {
-  cylinder_hydraulik_pressure.set(1);
   cylinder_messer.set(0);
   cylinder_schlittenzuluft.set(0);
   cylinder_schlittenabluft.set(0);
@@ -497,6 +499,7 @@ void switch_play_pause_push(void *ptr) {
   state_controller.toggle_machine_running_state();
   nex_state_machine_running = !nex_state_machine_running;
   machine_stopped_error_timeout.reset_time();
+  bandsensor_timeout.reset_time();
 }
 
 void switch_step_auto_mode_push(void *ptr) {
@@ -521,6 +524,7 @@ void button_next_step_push(void *ptr) {
 }
 
 void button_reset_rig_push(void *ptr) {
+  reset_count = 0;
   state_controller.set_reset_mode(true);
   state_controller.set_run_after_reset(0);
   clear_text_field("t4"); // info field
@@ -1246,18 +1250,25 @@ void monitor_emergency_signal() {
   if (emergency_stop_signal.switched_low()) {
     power_on_electrocylinder();
     cylinder_hydraulik_pressure.set(1);
+    cylinder_hauptluft.set(1);
   }
 
   // STOP SYSTEM
   if (emergency_stop_signal.switched_high()) {
-    state_controller.set_step_mode(); // deactivates cooling air
-    cylinder_kuehlluft.set(0);
+    cylinder_hauptluft.set(0);
+    state_controller.set_machine_stop();
+    state_controller.set_step_mode();
     reset_machine();
     show_info_field();
     display_text_in_info_field("NOT AUS AKTIV");
     power_off_electrocylinder();
-    delay(1500); // wait for hydraulic cylinders to move back
+    delay(1200); // wait for hydraulic cylinders to move back
     cylinder_hydraulik_pressure.set(0);
+  }
+
+  // KEEP SYSTEM STOPPED
+  if (emergency_stop_signal.get_button_state()) {
+    state_controller.set_machine_stop();
   }
 }
 
@@ -1321,12 +1332,23 @@ void setup() {
     power_on_electrocylinder();
     cylinder_hydraulik_pressure.set(1);
   }
+  cylinder_hauptluft.set(1);
   Serial.println("EXIT SETUP");
 }
 
 // MAIN LOOP *******************************************************************
 
-void monitor_machine_stopped_error_timeout() {
+void monitor_error_timeouts() {
+
+  if (bandsensor_timeout.has_timed_out()) {
+    state_controller.set_machine_stop();
+    state_controller.set_error_mode(true);
+    cylinder_hydraulik_pressure.set(0);
+    send_email_machine_stopped();
+    show_info_field();
+    display_text_in_info_field("KEIN BAND UNTEN");
+  }
+
   if (machine_stopped_error_timeout.has_timed_out()) {
     show_info_field();
     display_text_in_info_field("STOPPED ...");
@@ -1407,16 +1429,26 @@ void run_step_or_auto_mode() {
   }
 }
 
-void rig_active_loop() {
+void loop() {
+
+  // MONITOR EMERGENCY SIGNAL:
+  monitor_emergency_signal();
+
+  // MEASURE AND DISPLAY MOTOR TEMPERATURE
+  display_temperature();
+
+  // CONTROL COOLING AIR
+  cylinder_kuehlluft.set(state_controller.is_in_auto_mode());
 
   // DO NOT WATCH TIMEOUT IF MACHINE IS NOT RUNNING (PAUSE):
   if (!state_controller.machine_is_running()) {
     machine_stopped_error_timeout.reset_time();
+    bandsensor_timeout.reset_time();
   }
 
   // MONITOR ERRORS ONLY WHEN RIG IS RUNNING IN AUTO MODE:
   if (state_controller.machine_is_running() && state_controller.is_in_auto_mode()) {
-    monitor_machine_stopped_error_timeout();
+    monitor_error_timeouts();
     monitor_temperature_error();
   }
 
@@ -1441,30 +1473,16 @@ void rig_active_loop() {
     }
   }
 
+  // CHECK LOWER STRAP:
+  if (bandsensor_unten.get_button_state()) {
+    bandsensor_timeout.reset_time();
+  }
+
   // DISPLAY DEBUG INFOMATION:
   //unsigned long runtime = measure_runtime();
   if (print_interval_timeout.has_timed_out()) {
     //Serial.println(runtime);
     print_interval_timeout.reset_time();
-  }
-}
-
-void loop() {
-
-  // MONITOR EMERGENCY SIGNAL:
-  monitor_emergency_signal();
-
-  // MEASURE AND DISPLAY MOTOR TEMPERATURE
-  display_temperature();
-
-  // CONTROL COOLING AIR
-  cylinder_kuehlluft.set(state_controller.is_in_auto_mode());
-
-  if (!emergency_stop_signal.get_button_state()) {
-    rig_active_loop();
-    // ... only required because pressure power is not switched yet
-    // rig_active loop can be replaced by switching pressure of
-    // when security valve is installed
   }
 }
 
