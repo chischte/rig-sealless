@@ -1235,8 +1235,11 @@ void power_off_electrocylinder() {
 
 void monitor_emergency_signal() {
 
+  static bool emergency_stop_active=false;
+
   // (RE-)START SYSTEM
   if (emergency_stop_signal.switched_low()) {
+    emergency_stop_active=false;
     power_on_electrocylinder();
     cylinder_main_hydraulik_pressure.set(1);
     cylinder_main_hauptluft.set(1);
@@ -1244,6 +1247,7 @@ void monitor_emergency_signal() {
 
   // STOP SYSTEM (LOOP RUNS ONLY ONCE)
   if (emergency_stop_signal.switched_high()) {
+    emergency_stop_active=true;
     cylinder_main_hauptluft.set(0);
     state_controller.set_machine_stop();
     state_controller.set_step_mode();
@@ -1256,7 +1260,7 @@ void monitor_emergency_signal() {
   }
 
   // KEEP SYSTEM STOPPED (LOOP KEEPS RUNNING)
-  if (emergency_stop_signal.get_button_state()) {
+  if (emergency_stop_active) {
     state_controller.set_machine_stop();
     cylinder_main_hydraulik_pressure.set(0);
     cylinder_main_hauptluft.set(0);
