@@ -268,7 +268,7 @@ void reset_machine() {
   cylinder_crimptaste.set(0);
   cylinder_auswerfer.set(0);
   foerderzylinder_zurueck();
-  if (!emergency_stop_signal.get_button_state()) {
+  if (!emergency_stop_signal.get_raw_button_state()) {
     cylinder_main_hydraulik_pressure.set(1);
     cylinder_main_hauptluft.set(1);
   }
@@ -667,7 +667,7 @@ void nextion_display_setup() {
   send_to_nextion();
   attach_push_and_pop();
 
-  delay(4000);
+  delay(3000);
   sendCommand("page 1"); // switch display to page x
   send_to_nextion();
 }
@@ -877,7 +877,7 @@ class Schlitten_zurueck : public Cycle_step {
 
   void do_initial_stuff() { move_sledge(); }
   void do_loop_stuff() {
-    if (sensor_sledge_startposition.get_button_state()) {
+    if (sensor_sledge_startposition.get_raw_button_state()) {
       vent_sledge();
       set_loop_completed();
     }
@@ -1195,13 +1195,13 @@ void get_electrocylinder_endpoints() {
 
   foerderzylinder_foerdern();
   Serial.println("FÄHRT ZUR STARTPOSITION");
-  while (!sensor_foerderzylinder_in.get_button_state()) {
+  while (!sensor_foerderzylinder_in.get_raw_button_state()) {
   }
   Serial.println("STARTPOSITION ERREICHT");
 
   foerderzylinder_zurueck();
   Serial.println("FÄHRT ZUR ENDPOSITION");
-  while (!sensor_foerderzylinder_out.get_button_state()) {
+  while (!sensor_foerderzylinder_out.get_raw_button_state()) {
   }
   Serial.println("ENDPOSITION ERREICHT");
   Serial.println("ZYLINDERINITIALISIERUNG ABGESCHLOSSEN");
@@ -1235,11 +1235,11 @@ void power_off_electrocylinder() {
 
 void monitor_emergency_signal() {
 
-  static bool emergency_stop_active=false;
+  static bool emergency_stop_active = false;
 
   // (RE-)START SYSTEM
   if (emergency_stop_signal.switched_low()) {
-    emergency_stop_active=false;
+    emergency_stop_active = false;
     power_on_electrocylinder();
     cylinder_main_hydraulik_pressure.set(1);
     cylinder_main_hauptluft.set(1);
@@ -1247,7 +1247,7 @@ void monitor_emergency_signal() {
 
   // STOP SYSTEM (LOOP RUNS ONLY ONCE)
   if (emergency_stop_signal.switched_high()) {
-    emergency_stop_active=true;
+    emergency_stop_active = true;
     cylinder_main_hauptluft.set(0);
     state_controller.set_machine_stop();
     state_controller.set_step_mode();
@@ -1266,72 +1266,6 @@ void monitor_emergency_signal() {
     cylinder_main_hauptluft.set(0);
   }
 }
-
-// MAIN SETUP ******************************************************************
-
-void setup() {
-  //------------------------------------------------
-  // SETUP PIN MODES:
-  pinMode(TRENNRELAIS_ZYLINDER_1, OUTPUT);
-  pinMode(TRENNRELAIS_ZYLINDER_2, OUTPUT);
-  pinMode(FOERDERZYLINDER_LOGIC_POWER_RELAY, OUTPUT);
-  pinMode(FOERDERZYLINDER_MOVE_IN, OUTPUT);
-  pinMode(FOERDERZYLINDER_MOVE_OUT, OUTPUT);
-
-  //------------------------------------------------
-  // PUSH THE CYCLE STEPS INTO THE VECTOR CONTAINER:
-  // PUSH SEQUENCE = CYCLE SEQUENCE !
-  main_cycle_steps.push_back(new Luft_ablassen);
-  main_cycle_steps.push_back(new Vorklemme_auf);
-  main_cycle_steps.push_back(new Schlitten_zurueck);
-  main_cycle_steps.push_back(new Nachklemme_auf);
-  main_cycle_steps.push_back(new Auswerfen);
-  main_cycle_steps.push_back(new Foerderklemme_zu);
-  main_cycle_steps.push_back(new Foerdern);
-  main_cycle_steps.push_back(new Vorklemme_zu);
-  main_cycle_steps.push_back(new Messer_ab);
-  main_cycle_steps.push_back(new Foerdereinheit_auf);
-  main_cycle_steps.push_back(new Foerderzylinder_zurueck);
-  main_cycle_steps.push_back(new Auswerfer_zurueck);
-  main_cycle_steps.push_back(new Messer_auf);
-  main_cycle_steps.push_back(new Tool_wippe_zu);
-  main_cycle_steps.push_back(new Foerderklemme_zu);
-  main_cycle_steps.push_back(new Aktiv_spannen);
-  main_cycle_steps.push_back(new Tool_spannen);
-  main_cycle_steps.push_back(new Foerderzylinder_stop);
-  main_cycle_steps.push_back(new Nachklemme_zu);
-  main_cycle_steps.push_back(new Foerdereinheit_auf);
-  main_cycle_steps.push_back(new Foerderzylinder_zurueck);
-  main_cycle_steps.push_back(new Tool_crimp);
-  main_cycle_steps.push_back(new Tool_wippe_auf);
-  main_cycle_steps.push_back(new Tool_pause);
-  //------------------------------------------------
-  // CONFIGURE THE STATE CONTROLLER:
-  int no_of_main_cycle_steps = main_cycle_steps.size();
-  state_controller.set_no_of_steps(no_of_main_cycle_steps);
-  //------------------------------------------------
-  // SETUP COUNTER:
-  counter.setup(0, 1023, counter_no_of_values);
-  //------------------------------------------------
-  Serial.begin(115200);
-  Serial1.begin(115200); // used to log to raspberry log merger via USB-Serial-Converter @ TX1/RX1
-  state_controller.set_step_mode();
-
-  //------------------------------------------------
-  nextion_display_setup();
-  // REQUIRED STEP TO MAKE SKETCH WORK AFTER RESET:
-  reset_flag_of_current_step();
-
-  if (!emergency_stop_signal.get_button_state()) { // emergency stop not activated
-    power_on_electrocylinder();
-    cylinder_main_hydraulik_pressure.set(1);
-    cylinder_main_hauptluft.set(1);
-  }
-
-  Serial.println("EXIT SETUP");
-}
-
-// MAIN LOOP *******************************************************************
 
 void monitor_error_timeouts() {
 
@@ -1395,6 +1329,72 @@ void monitor_temperature_error() {
     display_text_in_info_field("TEMPERATURE ERROR");
   }
 }
+
+// MAIN SETUP ******************************************************************
+
+void setup() {
+  //------------------------------------------------
+  // SETUP PIN MODES:
+  pinMode(TRENNRELAIS_ZYLINDER_1, OUTPUT);
+  pinMode(TRENNRELAIS_ZYLINDER_2, OUTPUT);
+  pinMode(FOERDERZYLINDER_LOGIC_POWER_RELAY, OUTPUT);
+  pinMode(FOERDERZYLINDER_MOVE_IN, OUTPUT);
+  pinMode(FOERDERZYLINDER_MOVE_OUT, OUTPUT);
+
+  //------------------------------------------------
+  // PUSH THE CYCLE STEPS INTO THE VECTOR CONTAINER:
+  // PUSH SEQUENCE = CYCLE SEQUENCE !
+  main_cycle_steps.push_back(new Luft_ablassen);
+  main_cycle_steps.push_back(new Vorklemme_auf);
+  main_cycle_steps.push_back(new Schlitten_zurueck);
+  main_cycle_steps.push_back(new Nachklemme_auf);
+  main_cycle_steps.push_back(new Auswerfen);
+  main_cycle_steps.push_back(new Foerderklemme_zu);
+  main_cycle_steps.push_back(new Foerdern);
+  main_cycle_steps.push_back(new Vorklemme_zu);
+  main_cycle_steps.push_back(new Messer_ab);
+  main_cycle_steps.push_back(new Foerdereinheit_auf);
+  main_cycle_steps.push_back(new Foerderzylinder_zurueck);
+  main_cycle_steps.push_back(new Auswerfer_zurueck);
+  main_cycle_steps.push_back(new Messer_auf);
+  main_cycle_steps.push_back(new Tool_wippe_zu);
+  main_cycle_steps.push_back(new Foerderklemme_zu);
+  main_cycle_steps.push_back(new Aktiv_spannen);
+  main_cycle_steps.push_back(new Tool_spannen);
+  main_cycle_steps.push_back(new Foerderzylinder_stop);
+  main_cycle_steps.push_back(new Nachklemme_zu);
+  main_cycle_steps.push_back(new Foerdereinheit_auf);
+  main_cycle_steps.push_back(new Foerderzylinder_zurueck);
+  main_cycle_steps.push_back(new Tool_crimp);
+  main_cycle_steps.push_back(new Tool_wippe_auf);
+  main_cycle_steps.push_back(new Tool_pause);
+  //------------------------------------------------
+  // CONFIGURE THE STATE CONTROLLER:
+  int no_of_main_cycle_steps = main_cycle_steps.size();
+  state_controller.set_no_of_steps(no_of_main_cycle_steps);
+  //------------------------------------------------
+  // SETUP COUNTER:
+  counter.setup(0, 1023, counter_no_of_values);
+  //------------------------------------------------
+  Serial.begin(115200);
+  Serial1.begin(115200); // used to log to raspberry log merger via USB-Serial-Converter @ TX1/RX1
+  state_controller.set_step_mode();
+
+  //------------------------------------------------
+  nextion_display_setup();
+  // REQUIRED STEP TO MAKE SKETCH WORK AFTER RESET:
+  reset_flag_of_current_step();
+
+  if (!emergency_stop_signal.get_raw_button_state()) { // emergency stop not activated
+    power_on_electrocylinder();
+    cylinder_main_hydraulik_pressure.set(1);
+    cylinder_main_hauptluft.set(1);
+  }
+
+  Serial.println("EXIT SETUP");
+}
+
+// MAIN LOOP *******************************************************************
 
 void run_step_or_auto_mode() {
 
@@ -1472,7 +1472,7 @@ void loop() {
   }
 
   // CHECK LOWER STRAP:
-  if (bandsensor_unten.get_button_state()) {
+  if (bandsensor_unten.get_raw_button_state()) {
     bandsensor_timeout.reset_time();
   }
 
