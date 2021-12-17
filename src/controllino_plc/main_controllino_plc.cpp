@@ -81,6 +81,8 @@ Debounce sensor_foerderzylinder_out(CONTROLLINO_A6); // GREEN
 Debounce emergency_stop_signal(CONTROLLINO_A10); //
 Debounce bandsensor_unten(CONTROLLINO_A1); //
 Debounce email_button(CONTROLLINO_A0); //
+Debounce hydraulic_safety_sensor_1(CONTROLLINO_A11); //
+Debounce hydraulic_safety_sensor_2(CONTROLLINO_A12); //
 // Bandsensor oben
 // Bansensor unten
 
@@ -104,12 +106,14 @@ Cylinder cylinder_hydr_nachklemme(CONTROLLINO_D14);
 Cylinder cylinder_hydr_vorschubklemme(CONTROLLINO_D6);
 Cylinder cylinder_messer(CONTROLLINO_D1);
 Cylinder cylinder_main_hauptluft(CONTROLLINO_D12);
+Cylinder cylinder_hydraulic_voltage(CONTROLLINO_D11);
 
 Insomnia nex_reset_button_timeout(10000); // pushtime to reset counter
 Insomnia print_interval_timeout(1000);
 Insomnia erase_force_value_timeout(5000);
 Insomnia log_force_value_timeout(1000);
 Insomnia machine_stopped_error_timeout(7000); // electrocylinder takes up to 20" to find start position
+Insomnia hydraulic_timeout(120000); // hydraulic main power shuts down if timed out
 Insomnia bandsensor_timeout(60000);
 Insomnia pressure_update_delay;
 Insomnia temperature_update_delay;
@@ -127,11 +131,13 @@ void send_log_cycle_reset(long value) {
   Serial1.print(value);
   Serial1.println(";");
 }
+
 void send_log_cycle_total(long value) {
   Serial1.print("LOG;CYCLE_TOTAL;");
   Serial1.print(value);
   Serial1.println(";");
 }
+
 void send_log_force_tension(long value) {
   if (value > 100) {
     Serial1.print("LOG;FORCE_TENSION;");
@@ -139,9 +145,11 @@ void send_log_force_tension(long value) {
     Serial1.println(";");
   }
 }
+
 void send_log_start_tensioning() { //
   Serial1.println("LOG;START_TENSION;");
 }
+
 void send_log_start_crimping() { //
   Serial1.println("LOG;START_CRIMP;");
 }
@@ -149,6 +157,7 @@ void send_log_start_crimping() { //
 void send_email_machine_stopped() { //
   Serial1.println("EMAIL;MACHINE_STOPPED;");
 }
+
 void send_email_button_pushed() { //
   Serial1.println("EMAIL;BUTTON_PUSHED;");
 }
@@ -252,6 +261,8 @@ void vent_sledge() {
 }
 
 void reset_machine() {
+  cylinder_hydraulic_voltage.set(1);
+  hydraulic_timeout.reset_time();
   state_controller.set_machine_stop();
   state_controller.set_error_mode(false);
   reset_flag_of_current_step();
@@ -551,8 +562,11 @@ void button_schlitten_pop(void *ptr) { //
 // TOUCH EVENT FUNCTIONS PAGE 2 - LEFT SIDE ------------------------------------
 
 void button_upper_slider_left_push(void *ptr) { decrease_slider_value(cycle_duration); }
+
 void button_upper_slider_right_push(void *ptr) { increase_slider_value(cycle_duration); }
+
 void button_lower_slider_left_push(void *ptr) { decrease_slider_value(max_temperature); }
+
 void button_lower_slider_right_push(void *ptr) { increase_slider_value(max_temperature); }
 
 void increase_slider_value(int eeprom_value_number) {
@@ -566,6 +580,7 @@ void increase_slider_value(int eeprom_value_number) {
     counter.set_value(eeprom_value_number, max_value);
   }
 }
+
 void decrease_slider_value(int eeprom_value_number) {
   long min_value = 0; // [mm]
   long interval = 5;
@@ -587,11 +602,13 @@ void button_reset_shorttime_counter_push(void *ptr) {
   nex_reset_button_timeout.reset_time();
   nex_reset_button_timeout.set_flag_activated(1);
 }
+
 void button_reset_shorttime_counter_pop(void *ptr) { nex_reset_button_timeout.set_flag_activated(0); }
 
 // PAGE CHANGING EVENTS (TRIGGER UPDATE OF ALL DISPLAY ELEMENTS) ---------------
 
 void page_0_push(void *ptr) { nex_current_page = 0; }
+
 void page_1_push(void *ptr) {
   nex_current_page = 1;
   hide_info_field();
@@ -607,10 +624,12 @@ void page_1_push(void *ptr) {
   nex_state_messer = 0;
   nex_state_machine_running = 0;
 }
+
 void page_2_push(void *ptr) {
   nex_current_page = 2;
   update_field_values_page_2();
 }
+
 void update_field_values_page_2() {
   nex_cycle_duration = counter.get_value(nex_cycle_duration) - 1;
   nex_max_temperature = counter.get_value(nex_max_temperature) - 1;
@@ -782,18 +801,21 @@ void update_upper_slider_value() {
     nex_cycle_duration = counter.get_value(cycle_duration);
   }
 }
+
 void update_lower_slider_value() {
   if (counter.get_value(max_temperature) != nex_max_temperature) {
     display_text_in_field(add_suffix_to_eeprom_value(max_temperature, " C"), "t22");
     nex_max_temperature = counter.get_value(max_temperature);
   }
 }
+
 String add_suffix_to_eeprom_value(int eeprom_value_number, String suffix) {
   String value = String(counter.get_value(eeprom_value_number));
   String space = " ";
   String suffixed_string = value + space + suffix;
   return suffixed_string;
 }
+
 void update_switches_page_2_left() {}
 
 // DIPLAY LOOP PAGE 2 RIGHT SIDE: ----------------------------------------------
@@ -810,6 +832,7 @@ void update_upper_counter_value() {
     nex_longtime_counter = counter.get_value(longtime_counter);
   }
 }
+
 void update_lower_counter_value() {
   // UPDATE LOWER COUNTER:
   if (nex_shorttime_counter != counter.get_value(shorttime_counter)) {
@@ -817,6 +840,7 @@ void update_lower_counter_value() {
     nex_shorttime_counter = counter.get_value(shorttime_counter);
   }
 }
+
 void reset_lower_counter_value() {
   if (nex_reset_button_timeout.is_marked_activated()) {
     if (nex_reset_button_timeout.has_timed_out()) {
@@ -1390,7 +1414,8 @@ void setup() {
     cylinder_main_hydraulik_pressure.set(1);
     cylinder_main_hauptluft.set(1);
   }
-
+  cylinder_hydraulic_voltage.set(1);
+  hydraulic_timeout.reset_time();
   Serial.println("EXIT SETUP");
 }
 
@@ -1406,6 +1431,7 @@ void run_step_or_auto_mode() {
 
   // IN STEP MODE, THE RIG STOPS AFTER EVERY COMPLETED STEP:
   if (state_controller.step_switch_has_happend()) {
+    hydraulic_timeout.reset_time();
     if (state_controller.is_in_step_mode()) {
       state_controller.set_machine_stop();
     }
@@ -1481,6 +1507,15 @@ void loop() {
   if (print_interval_timeout.has_timed_out()) {
     //Serial.println(runtime);
     print_interval_timeout.reset_time();
+  }
+  // POWER OFF HYDRAULIC AFTER A WHILE OF INACTIVITY
+  if (hydraulic_timeout.has_timed_out()) {
+    cylinder_hydraulic_voltage.set(0);
+  }
+
+  // POWER OFF HYDRAULIC IF HYDRAULIC SAFETY SENSOR IS LOW
+  if (!hydraulic_safety_sensor_1.get_raw_button_state()||!hydraulic_safety_sensor_2.get_raw_button_state()) {
+    cylinder_hydraulic_voltage.set(0);
   }
 }
 
