@@ -79,12 +79,11 @@ Debounce sensor_sledge_endposition(CONTROLLINO_A5);
 Debounce sensor_foerderzylinder_in(CONTROLLINO_A7); // BROWN
 Debounce sensor_foerderzylinder_out(CONTROLLINO_A6); // GREEN
 Debounce emergency_stop_signal(CONTROLLINO_A10); //
+Debounce bandsensor_oben(CONTROLLINO_A8); //
 Debounce bandsensor_unten(CONTROLLINO_A1); //
 Debounce email_button(CONTROLLINO_A0); //
 Debounce hydraulic_safety_sensor_1(CONTROLLINO_A11); //
 Debounce hydraulic_safety_sensor_2(CONTROLLINO_A12); //
-// Bandsensor oben
-// Bansensor unten
 
 // OUTPUT PINS:
 const byte FOERDERZYLINDER_LOGIC_POWER_RELAY = CONTROLLINO_R6; // WHITE // turn on >=50ms after start of "load voltage"
@@ -114,7 +113,7 @@ Insomnia erase_force_value_timeout(5000);
 Insomnia log_force_value_timeout(1000);
 Insomnia machine_stopped_error_timeout(7000); // electrocylinder takes up to 20" to find start position
 Insomnia hydraulic_timeout(120000); // hydraulic main power shuts down if timed out
-Insomnia bandsensor_timeout(60000);
+Insomnia bandsensor_timeout(1500);
 Insomnia pressure_update_delay;
 Insomnia temperature_update_delay;
 Insomnia cycle_step_delay;
@@ -1298,9 +1297,10 @@ void monitor_error_timeouts() {
     state_controller.set_machine_stop();
     state_controller.set_error_mode(true);
     cylinder_main_hydraulik_pressure.set(0);
+    cylinder_main_hauptluft.set(0);
     send_email_machine_stopped();
     show_info_field();
-    display_text_in_info_field("KEIN BAND UNTEN");
+    display_text_in_info_field("KEIN BAND");
   }
 
   // TIMEOUT IF STUCK IN A CYCLE:
@@ -1336,6 +1336,7 @@ void monitor_error_timeouts() {
       state_controller.set_machine_stop();
       state_controller.set_error_mode(true);
       cylinder_main_hydraulik_pressure.set(0);
+      cylinder_main_hauptluft.set(0);
       send_email_machine_stopped();
       show_info_field();
       display_text_in_info_field("TIMEOUT ERROR");
@@ -1498,7 +1499,7 @@ void loop() {
   }
 
   // CHECK LOWER STRAP:
-  if (bandsensor_unten.get_raw_button_state()) {
+  if (bandsensor_unten.get_raw_button_state() && bandsensor_oben.get_raw_button_state()) {
     bandsensor_timeout.reset_time();
   }
 
@@ -1514,7 +1515,7 @@ void loop() {
   }
 
   // POWER OFF HYDRAULIC IF HYDRAULIC SAFETY SENSOR IS LOW
-  if (!hydraulic_safety_sensor_1.get_raw_button_state()||!hydraulic_safety_sensor_2.get_raw_button_state()) {
+  if (!hydraulic_safety_sensor_1.get_raw_button_state() || !hydraulic_safety_sensor_2.get_raw_button_state()) {
     cylinder_hydraulic_voltage.set(0);
   }
 }
