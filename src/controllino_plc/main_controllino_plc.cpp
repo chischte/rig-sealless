@@ -79,9 +79,8 @@ Debounce sensor_sledge_endposition(CONTROLLINO_A5);
 Debounce sensor_foerderzylinder_in(CONTROLLINO_A7); // BROWN
 Debounce sensor_foerderzylinder_out(CONTROLLINO_A6); // GREEN
 Debounce emergency_stop_signal(CONTROLLINO_A10); //
-Debounce bandsensor_oben(CONTROLLINO_A8); //
+Debounce bandsensor_oben(CONTROLLINO_A0); //
 Debounce bandsensor_unten(CONTROLLINO_A1); //
-Debounce email_button(CONTROLLINO_A0); //
 Debounce hydraulic_safety_sensor_1(CONTROLLINO_A11); //
 Debounce hydraulic_safety_sensor_2(CONTROLLINO_A12); //
 
@@ -1498,7 +1497,7 @@ void loop() {
     }
   }
 
-  // CHECK LOWER STRAP:
+  // CHECK IF STRAP AVAILABLE:
   if (bandsensor_unten.get_raw_button_state() && bandsensor_oben.get_raw_button_state()) {
     bandsensor_timeout.reset_time();
   }
