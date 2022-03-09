@@ -1348,6 +1348,7 @@ void monitor_temperature_error() {
     state_controller.set_machine_stop();
     state_controller.set_error_mode(true);
     cylinder_main_hydraulik_pressure.set(0);
+    cylinder_main_hauptluft.set(0);
     send_email_machine_stopped();
     show_info_field();
     display_text_in_info_field("TEMPERATURE ERROR");
