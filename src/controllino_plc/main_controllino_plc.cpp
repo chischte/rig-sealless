@@ -53,6 +53,7 @@ void update_field_values_page_2();
 void show_info_field();
 void display_temperature();
 void display_text_in_field(String text, String textField);
+void error_stop_machine(String error_message);
 String get_main_cycle_display_string();
 String add_suffix_to_eeprom_value(int eeprom_value_number, String suffix);
 
@@ -79,8 +80,10 @@ Debounce sensor_sledge_endposition(CONTROLLINO_A5);
 Debounce sensor_foerderzylinder_in(CONTROLLINO_A7); // BROWN
 Debounce sensor_foerderzylinder_out(CONTROLLINO_A6); // GREEN
 Debounce emergency_stop_signal(CONTROLLINO_A10); //
-Debounce bandsensor_oben(CONTROLLINO_A0); //
-Debounce bandsensor_unten(CONTROLLINO_A1); //
+Debounce bandsensor_zufuhr_oben(CONTROLLINO_A0); //
+Debounce bandsensor_zufuhr_unten(CONTROLLINO_A1); //
+// Debounce bandsensor_messerplatte(CONTROLLINO_A8);
+Debounce sensor_messerzylinder(CONTROLLINO_A9);
 Debounce hydraulic_safety_sensor_1(CONTROLLINO_A11); //
 Debounce hydraulic_safety_sensor_2(CONTROLLINO_A12); //
 
@@ -120,7 +123,7 @@ Insomnia cycle_step_delay;
 // GLOBAL VARIABLES: -----------------------------------------------------------
 unsigned long cycle_start_millis = millis();
 char reset_count = 0; // to monitor how many resets have been made
-char cut_count = 0; // only cut strap every n times
+char strap_count_for_knife = 0; // only cut strap every n times
 
 // LOGS AND EMAILS: ------------------------------------------------------------
 
@@ -1001,24 +1004,44 @@ class Vorklemme_zu : public Cycle_step {
 };
 
 // MESSER AB
-class Messer_ab : public Cycle_step {
-  String get_display_text() { return "MESSER AB"; }
+
+class Schneiden : public Cycle_step {
+  String get_display_text() { return "SCHNEIDEN"; }
+  int cut_retries = 0;
 
   void do_initial_stuff() {
+    cut_retries = 0;
     vent_sledge();
     cycle_step_delay.set_unstarted();
   }
+
+  void try_cutting_twice() {
+    cylinder_messer.stroke(1000, 500);
+
+    if (cylinder_messer.stroke_completed()) {
+      cut_retries++;
+    }
+
+    if (cut_retries == 2) {
+      strap_count_for_knife = 0;
+      cylinder_messer.abort_stroke();
+      set_loop_completed();
+      error_stop_machine("ERROR MESSER");
+    }
+
+    if (sensor_messerzylinder.switched_high()) {
+      strap_count_for_knife = 0;
+      cylinder_messer.abort_stroke();
+      set_loop_completed();
+    }
+  }
   void do_loop_stuff() {
 
-    if (cut_count == 4) {
-      cylinder_messer.set(1);
-      if (cycle_step_delay.delay_time_is_up(600)) {
-        cut_count = 0;
-        set_loop_completed();
-      }
+    if (strap_count_for_knife == 4) {
+      try_cutting_twice();
     } else {
       if (cycle_step_delay.delay_time_is_up(600)) {
-        cut_count++;
+        strap_count_for_knife++;
         set_loop_completed();
       }
     }
@@ -1062,28 +1085,28 @@ class Foerderzylinder_zurueck : public Cycle_step {
 class Auswerfer_zurueck : public Cycle_step {
   String get_display_text() { return "AUSWERFER ZURUECK"; }
 
-  void do_initial_stuff() {}
+  void do_initial_stuff() { vent_sledge(); }
   void do_loop_stuff() {
     cylinder_auswerfer.set(0);
     set_loop_completed();
   }
 };
 
-// MESSER AUF
-class Messer_auf : public Cycle_step {
-  String get_display_text() { return "MESSER AUF"; }
+// // MESSER AUF
+// class Messer_auf : public Cycle_step {
+//   String get_display_text() { return "MESSER AUF"; }
 
-  void do_initial_stuff() {
-    vent_sledge();
-    cycle_step_delay.set_unstarted();
-  }
-  void do_loop_stuff() {
-    cylinder_messer.set(0);
-    if (cycle_step_delay.delay_time_is_up(500)) {
-      set_loop_completed();
-    }
-  }
-};
+//   void do_initial_stuff() {
+//     vent_sledge();
+//     cycle_step_delay.set_unstarted();
+//   }
+//   void do_loop_stuff() {
+//     cylinder_messer.set(0);
+//     if (cycle_step_delay.delay_time_is_up(500)) {
+//       set_loop_completed();
+//     }
+//   }
+// };
 
 // WIPPENHEBEL SCHLIESSEN
 class Tool_wippe_zu : public Cycle_step {
@@ -1391,11 +1414,11 @@ void setup() {
   main_cycle_steps.push_back(new Foerderklemme_zu);
   main_cycle_steps.push_back(new Foerdern);
   main_cycle_steps.push_back(new Vorklemme_zu);
-  main_cycle_steps.push_back(new Messer_ab);
+  main_cycle_steps.push_back(new Schneiden);
   main_cycle_steps.push_back(new Foerdereinheit_auf);
   main_cycle_steps.push_back(new Foerderzylinder_zurueck);
   main_cycle_steps.push_back(new Auswerfer_zurueck);
-  main_cycle_steps.push_back(new Messer_auf);
+  // main_cycle_steps.push_back(new Messer_auf);
   main_cycle_steps.push_back(new Tool_wippe_zu);
   main_cycle_steps.push_back(new Foerderklemme_zu);
   main_cycle_steps.push_back(new Aktiv_spannen);
@@ -1514,7 +1537,7 @@ void loop() {
   }
 
   // CHECK IF STRAP AVAILABLE:
-  if (bandsensor_unten.get_raw_button_state() && bandsensor_oben.get_raw_button_state()) {
+  if (bandsensor_zufuhr_unten.get_raw_button_state() && bandsensor_zufuhr_oben.get_raw_button_state()) {
     bandsensor_timeout.reset_time();
   }
 
