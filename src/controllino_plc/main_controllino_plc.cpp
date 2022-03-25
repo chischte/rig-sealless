@@ -98,13 +98,13 @@ Cylinder cylinder_auswerfer(CONTROLLINO_D3);
 Cylinder cylinder_spanntaste(CONTROLLINO_D5);
 Cylinder cylinder_crimptaste(CONTROLLINO_D2);
 Cylinder cylinder_wippenhebel(CONTROLLINO_D0);
-Cylinder cylinder_main_hydraulik_pressure(CONTROLLINO_D7);
+Cylinder cylinder_messer(CONTROLLINO_D1);
+Cylinder cylinder_main_hauptluft(CONTROLLINO_D12);
+Cylinder cylinder_hydr_pressure_valve(CONTROLLINO_D7);
 Cylinder cylinder_hydr_vorklemme(CONTROLLINO_D15);
 Cylinder cylinder_hydr_nachklemme(CONTROLLINO_D14);
 Cylinder cylinder_hydr_vorschubklemme(CONTROLLINO_D6);
-Cylinder cylinder_messer(CONTROLLINO_D1);
-Cylinder cylinder_main_hauptluft(CONTROLLINO_D12);
-Cylinder cylinder_hydraulic_voltage(CONTROLLINO_D11);
+Cylinder cylinder_hydr_power_supply(CONTROLLINO_D11);
 
 Insomnia nex_reset_button_timeout(10000); // pushtime to reset counter
 Insomnia print_interval_timeout(1000);
@@ -264,31 +264,49 @@ void stroke_wippenhebel() {
   cylinder_wippenhebel.set(0);
 }
 
-void reset_machine() {
-  cylinder_hydraulic_voltage.set(1);
-  hydraulic_timeout.reset_time();
-  state_controller.set_machine_stop();
-  state_controller.set_error_mode(false);
-  reset_flag_of_current_step();
-  state_controller.set_current_step_to(0);
-  reset_flag_of_current_step();
+void reset_pneumatics() {
   cylinder_messer.set(0);
   cylinder_schlittenzuluft.set(0);
   cylinder_schlittenabluft.set(0);
   cylinder_wippenhebel.set(0);
   cylinder_spanntaste.set(0);
+  cylinder_crimptaste.set(0);
+  cylinder_auswerfer.set(0);
+}
+
+void reset_hydraulics() {
+  hydraulic_timeout.reset_time();
+  cylinder_hydr_power_supply.set(1);
+  cylinder_hydr_pressure_valve.set(1);
   cylinder_hydr_vorklemme.set(0);
   cylinder_hydr_nachklemme.set(0);
   cylinder_hydr_vorschubklemme.set(0);
-  cylinder_crimptaste.set(0);
-  cylinder_auswerfer.set(0);
-  foerderzylinder_zurueck();
-  if (!emergency_stop_signal.get_raw_button_state()) {
-    cylinder_main_hydraulik_pressure.set(1);
-    cylinder_main_hauptluft.set(1);
-  }
+  delay(1000); // time for Hydraulic cylinders to move back
+}
+
+void reset_machine_states() {
+  state_controller.set_machine_stop();
+  state_controller.set_error_mode(false);
+  reset_flag_of_current_step();
+  state_controller.set_current_step_to(0);
+  reset_flag_of_current_step();
   clear_text_field("t4");
   hide_info_field();
+}
+
+void reset_electrocylinder() { //
+  foerderzylinder_zurueck();
+}
+
+void reset_machine() {
+  if (!emergency_stop_signal.get_raw_button_state()) {
+    cylinder_hydr_pressure_valve.set(1);
+    cylinder_main_hauptluft.set(1);
+  }
+  reset_machine_states();
+  reset_pneumatics();
+  reset_electrocylinder();
+  reset_hydraulics();
 }
 
 long measure_runtime() {
@@ -1261,10 +1279,10 @@ void power_off_electrocylinder() {
 void stop_machine(String error_message) {
   state_controller.set_machine_stop();
   state_controller.set_step_mode();
-  cylinder_main_hauptluft.set(0);
   reset_machine();
-  delay(1000); // time for Hydraulic cylinders to move back
-  cylinder_main_hydraulik_pressure.set(0);
+  cylinder_hydr_pressure_valve.set(0);
+  stroke_wippenhebel();
+  cylinder_main_hauptluft.set(0);
   power_off_electrocylinder();
   show_info_field();
   display_text_in_info_field(error_message);
@@ -1284,7 +1302,8 @@ void monitor_emergency_signal() {
   if (emergency_stop_signal.switched_low()) {
     emergency_stop_active = false;
     power_on_electrocylinder();
-    cylinder_main_hydraulik_pressure.set(1);
+    hydraulic_timeout.reset_time();
+    cylinder_hydr_pressure_valve.set(1);
     cylinder_main_hauptluft.set(1);
   }
 
@@ -1297,7 +1316,7 @@ void monitor_emergency_signal() {
   // KEEP SYSTEM STOPPED (LOOP KEEPS RUNNING)
   if (emergency_stop_active) {
     state_controller.set_machine_stop();
-    cylinder_main_hydraulik_pressure.set(0);
+    cylinder_hydr_pressure_valve.set(0);
     cylinder_main_hauptluft.set(0);
   }
 }
@@ -1407,10 +1426,10 @@ void setup() {
 
   if (!emergency_stop_signal.get_raw_button_state()) { // emergency stop not activated
     power_on_electrocylinder();
-    cylinder_main_hydraulik_pressure.set(1);
+    cylinder_hydr_pressure_valve.set(1);
     cylinder_main_hauptluft.set(1);
   }
-  cylinder_hydraulic_voltage.set(1);
+  cylinder_hydr_power_supply.set(1);
   hydraulic_timeout.reset_time();
   Serial.println("EXIT SETUP");
 }
@@ -1507,12 +1526,12 @@ void loop() {
   }
   // POWER OFF HYDRAULIC AFTER A WHILE OF INACTIVITY
   if (hydraulic_timeout.has_timed_out()) {
-    cylinder_hydraulic_voltage.set(0);
+    cylinder_hydr_power_supply.set(0);
   }
 
   // POWER OFF HYDRAULIC IF HYDRAULIC SAFETY SENSOR IS LOW
   if (!hydraulic_safety_sensor_1.get_raw_button_state() || !hydraulic_safety_sensor_2.get_raw_button_state()) {
-    cylinder_hydraulic_voltage.set(0);
+    cylinder_hydr_power_supply.set(0);
   }
 }
 
