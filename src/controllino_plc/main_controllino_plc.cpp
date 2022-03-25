@@ -15,18 +15,18 @@
 
 // INCLUDE HEADERS *************************************************************
 
-#include <ArduinoSTL.h> //       https://github.com/mike-matera/ArduinoSTL
-#include <Controllino.h> //      PIO Controllino Library
-#include <Cylinder.h> //         https://github.com/chischte/cylinder-library
-#include <Debounce.h> //         https://github.com/chischte/debounce-library
-#include <EEPROM_Counter.h> //   https://github.com/chischte/eeprom-counter-library
-#include <Insomnia.h> //         https://github.com/chischte/insomnia-delay-library
-#include <Nextion.h> //          PIO Nextion library
-#include <SD.h> //               PIO Adafruit SD library
+#include <ArduinoSTL.h> //      https://github.com/mike-matera/ArduinoSTL
+#include <Controllino.h> //     PIO Controllino Library
+#include <Cylinder.h> //        https://github.com/chischte/cylinder-library
+#include <Debounce.h> //        https://github.com/chischte/debounce-library
+#include <EEPROM_Counter.h> //  https://github.com/chischte/eeprom-counter-library
+#include <Insomnia.h> //        https://github.com/chischte/insomnia-delay-library
+#include <Nextion.h> //         PIO Nextion library
+#include <SD.h> //              PIO Adafruit SD library
 
-#include <controllino_plc/alias_colino.h> //        aliases when using an Arduino instead of a Controllino
-#include <controllino_plc/cycle_step.h> //          blueprint of a cycle step
-#include <controllino_plc/state_controller.h> //    keeps track of machine states
+#include <controllino_plc/alias_colino.h> //      aliases when using an Arduino instead of a Controllino
+#include <controllino_plc/cycle_step.h> //        blueprint of a cycle step
+#include <controllino_plc/state_controller.h> //  keeps track of machine states
 
 // DECLARE FUNCTIONS IF NEEDED FOR THE COMPILER: *******************************
 
@@ -258,6 +258,12 @@ void vent_sledge() {
   cylinder_schlittenabluft.set(0);
 }
 
+void stroke_wippenhebel() {
+  cylinder_wippenhebel.set(1);
+  delay(500);
+  cylinder_wippenhebel.set(0);
+}
+
 void reset_machine() {
   cylinder_hydraulic_voltage.set(1);
   hydraulic_timeout.reset_time();
@@ -283,9 +289,6 @@ void reset_machine() {
   }
   clear_text_field("t4");
   hide_info_field();
-  cylinder_wippenhebel.set(1);
-  delay(500);
-  cylinder_wippenhebel.set(0);
 }
 
 long measure_runtime() {
@@ -1255,6 +1258,24 @@ void power_off_electrocylinder() {
   digitalWrite(FOERDERZYLINDER_LOGIC_POWER_RELAY, LOW);
 }
 
+void stop_machine(String error_message) {
+  state_controller.set_machine_stop();
+  state_controller.set_step_mode();
+  cylinder_main_hauptluft.set(0);
+  reset_machine();
+  delay(1000); // time for Hydraulic cylinders to move back
+  cylinder_main_hydraulik_pressure.set(0);
+  power_off_electrocylinder();
+  show_info_field();
+  display_text_in_info_field(error_message);
+}
+
+void error_stop_machine(String error_message) {
+  stop_machine(error_message);
+  send_email_machine_stopped();
+  state_controller.set_error_mode(true);
+}
+
 void monitor_emergency_signal() {
 
   static bool emergency_stop_active = false;
@@ -1270,15 +1291,7 @@ void monitor_emergency_signal() {
   // STOP SYSTEM (LOOP RUNS ONLY ONCE)
   if (emergency_stop_signal.switched_high()) {
     emergency_stop_active = true;
-    cylinder_main_hauptluft.set(0);
-    state_controller.set_machine_stop();
-    state_controller.set_step_mode();
-    reset_machine();
-    show_info_field();
-    display_text_in_info_field("NOT AUS AKTIV");
-    power_off_electrocylinder();
-    delay(1500); // wait for hydraulic cylinders to move back
-    cylinder_main_hydraulik_pressure.set(0);
+    stop_machine("NOT AUS AKTIV");
   }
 
   // KEEP SYSTEM STOPPED (LOOP KEEPS RUNNING)
@@ -1293,13 +1306,7 @@ void monitor_error_timeouts() {
 
   // TIMEOUT IF NO LOWER STRAP DETECTED:
   if (bandsensor_timeout.has_timed_out()) {
-    state_controller.set_machine_stop();
-    state_controller.set_error_mode(true);
-    cylinder_main_hydraulik_pressure.set(0);
-    cylinder_main_hauptluft.set(0);
-    send_email_machine_stopped();
-    show_info_field();
-    display_text_in_info_field("KEIN BAND");
+    error_stop_machine("KEIN BAND");
   }
 
   // TIMEOUT IF STUCK IN A CYCLE:
@@ -1332,26 +1339,14 @@ void monitor_error_timeouts() {
 
     else if (reset_count == 2) {
       // Stop and show error:
-      state_controller.set_machine_stop();
-      state_controller.set_error_mode(true);
-      cylinder_main_hydraulik_pressure.set(0);
-      cylinder_main_hauptluft.set(0);
-      send_email_machine_stopped();
-      show_info_field();
-      display_text_in_info_field("TIMEOUT ERROR");
+      error_stop_machine("TIMEOUT ERROR");
     }
   }
 }
 
 void monitor_temperature_error() {
   if (get_temperature() > counter.get_value(max_temperature)) {
-    state_controller.set_machine_stop();
-    state_controller.set_error_mode(true);
-    cylinder_main_hydraulik_pressure.set(0);
-    cylinder_main_hauptluft.set(0);
-    send_email_machine_stopped();
-    show_info_field();
-    display_text_in_info_field("TEMPERATURE ERROR");
+    error_stop_machine("TEMPERATURE ERROR");
   }
 }
 
@@ -1488,6 +1483,7 @@ void loop() {
   // RUN RESET IF RESET IS ACTIVATED:
   if (state_controller.reset_mode_is_active()) {
     reset_machine();
+    stroke_wippenhebel();
     state_controller.set_reset_mode(0);
 
     if (state_controller.run_after_reset_is_active()) {
