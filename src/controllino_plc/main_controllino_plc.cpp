@@ -54,6 +54,7 @@ void show_info_field();
 void display_temperature();
 void display_text_in_field(String text, String textField);
 void error_stop_machine(String error_message);
+void power_on_electrocylinder();
 String get_main_cycle_display_string();
 String add_suffix_to_eeprom_value(int eeprom_value_number, String suffix);
 
@@ -308,6 +309,8 @@ void reset_machine() {
   }
   reset_machine_states();
   reset_pneumatics();
+  // power_on_electrocylinder();
+  // diasbled because it has an 8s delay
   reset_electrocylinder();
   reset_hydraulics();
 }
@@ -1022,9 +1025,11 @@ class Schneiden : public Cycle_step {
     // knife did not cut through and a second stroke will be started.
     if (cylinder_messer.stroke_completed()) {
       cut_retries++;
+      cylinder_messer.set(0);
+      delay (500);
     }
 
-    if (cut_retries == 2) {
+    if (cut_retries == 3) {
       strap_count_for_knife = 0;
       cylinder_messer.abort_stroke();
       set_loop_completed();
@@ -1034,6 +1039,8 @@ class Schneiden : public Cycle_step {
     if (sensor_messerzylinder.switched_high()) {
       strap_count_for_knife = 0;
       cylinder_messer.abort_stroke();
+      cylinder_messer.set(0);
+      delay(500);
       set_loop_completed();
     }
   }
