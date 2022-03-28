@@ -1018,6 +1018,8 @@ class Schneiden : public Cycle_step {
   void try_cutting_twice() {
     cylinder_messer.stroke(1000, 500);
 
+    // If sensor does not switch high during the set stroke time,
+    // knife did not cut through and a second stroke will be started.
     if (cylinder_messer.stroke_completed()) {
       cut_retries++;
     }
