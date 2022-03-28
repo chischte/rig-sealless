@@ -15,18 +15,18 @@
 
 // INCLUDE HEADERS *************************************************************
 
-#include <ArduinoSTL.h> //       https://github.com/mike-matera/ArduinoSTL
-#include <Controllino.h> //      PIO Controllino Library
-#include <Cylinder.h> //         https://github.com/chischte/cylinder-library
-#include <Debounce.h> //         https://github.com/chischte/debounce-library
-#include <EEPROM_Counter.h> //   https://github.com/chischte/eeprom-counter-library
-#include <Insomnia.h> //         https://github.com/chischte/insomnia-delay-library
-#include <Nextion.h> //          PIO Nextion library
-#include <SD.h> //               PIO Adafruit SD library
+#include <ArduinoSTL.h> //      https://github.com/mike-matera/ArduinoSTL
+#include <Controllino.h> //     PIO Controllino Library
+#include <Cylinder.h> //        https://github.com/chischte/cylinder-library
+#include <Debounce.h> //        https://github.com/chischte/debounce-library
+#include <EEPROM_Counter.h> //  https://github.com/chischte/eeprom-counter-library
+#include <Insomnia.h> //        https://github.com/chischte/insomnia-delay-library
+#include <Nextion.h> //         PIO Nextion library
+#include <SD.h> //              PIO Adafruit SD library
 
-#include <controllino_plc/alias_colino.h> //        aliases when using an Arduino instead of a Controllino
-#include <controllino_plc/cycle_step.h> //          blueprint of a cycle step
-#include <controllino_plc/state_controller.h> //    keeps track of machine states
+#include <controllino_plc/alias_colino.h> //      aliases when using an Arduino instead of a Controllino
+#include <controllino_plc/cycle_step.h> //        blueprint of a cycle step
+#include <controllino_plc/state_controller.h> //  keeps track of machine states
 
 // DECLARE FUNCTIONS IF NEEDED FOR THE COMPILER: *******************************
 
@@ -53,6 +53,8 @@ void update_field_values_page_2();
 void show_info_field();
 void display_temperature();
 void display_text_in_field(String text, String textField);
+void error_stop_machine(String error_message);
+void power_on_electrocylinder();
 String get_main_cycle_display_string();
 String add_suffix_to_eeprom_value(int eeprom_value_number, String suffix);
 
@@ -79,8 +81,10 @@ Debounce sensor_sledge_endposition(CONTROLLINO_A5);
 Debounce sensor_foerderzylinder_in(CONTROLLINO_A7); // BROWN
 Debounce sensor_foerderzylinder_out(CONTROLLINO_A6); // GREEN
 Debounce emergency_stop_signal(CONTROLLINO_A10); //
-Debounce bandsensor_oben(CONTROLLINO_A0); //
-Debounce bandsensor_unten(CONTROLLINO_A1); //
+Debounce bandsensor_zufuhr_oben(CONTROLLINO_A0); //
+Debounce bandsensor_zufuhr_unten(CONTROLLINO_A1); //
+// Debounce bandsensor_messerplatte(CONTROLLINO_A8);
+Debounce sensor_messerzylinder(CONTROLLINO_A9);
 Debounce hydraulic_safety_sensor_1(CONTROLLINO_A11); //
 Debounce hydraulic_safety_sensor_2(CONTROLLINO_A12); //
 
@@ -98,13 +102,13 @@ Cylinder cylinder_auswerfer(CONTROLLINO_D3);
 Cylinder cylinder_spanntaste(CONTROLLINO_D5);
 Cylinder cylinder_crimptaste(CONTROLLINO_D2);
 Cylinder cylinder_wippenhebel(CONTROLLINO_D0);
-Cylinder cylinder_main_hydraulik_pressure(CONTROLLINO_D7);
+Cylinder cylinder_messer(CONTROLLINO_D1);
+Cylinder cylinder_main_hauptluft(CONTROLLINO_D12);
+Cylinder cylinder_hydr_pressure_valve(CONTROLLINO_D7);
 Cylinder cylinder_hydr_vorklemme(CONTROLLINO_D15);
 Cylinder cylinder_hydr_nachklemme(CONTROLLINO_D14);
 Cylinder cylinder_hydr_vorschubklemme(CONTROLLINO_D6);
-Cylinder cylinder_messer(CONTROLLINO_D1);
-Cylinder cylinder_main_hauptluft(CONTROLLINO_D12);
-Cylinder cylinder_hydraulic_voltage(CONTROLLINO_D11);
+Cylinder cylinder_hydr_power_supply(CONTROLLINO_D11);
 
 Insomnia nex_reset_button_timeout(10000); // pushtime to reset counter
 Insomnia print_interval_timeout(1000);
@@ -120,7 +124,7 @@ Insomnia cycle_step_delay;
 // GLOBAL VARIABLES: -----------------------------------------------------------
 unsigned long cycle_start_millis = millis();
 char reset_count = 0; // to monitor how many resets have been made
-char cut_count = 0; // only cut strap every n times
+char strap_count_for_knife = 0; // only cut strap every n times
 
 // LOGS AND EMAILS: ------------------------------------------------------------
 
@@ -258,34 +262,57 @@ void vent_sledge() {
   cylinder_schlittenabluft.set(0);
 }
 
-void reset_machine() {
-  cylinder_hydraulic_voltage.set(1);
-  hydraulic_timeout.reset_time();
-  state_controller.set_machine_stop();
-  state_controller.set_error_mode(false);
-  reset_flag_of_current_step();
-  state_controller.set_current_step_to(0);
-  reset_flag_of_current_step();
+void stroke_wippenhebel() {
+  cylinder_wippenhebel.set(1);
+  delay(500);
+  cylinder_wippenhebel.set(0);
+}
+
+void reset_pneumatics() {
   cylinder_messer.set(0);
   cylinder_schlittenzuluft.set(0);
   cylinder_schlittenabluft.set(0);
   cylinder_wippenhebel.set(0);
   cylinder_spanntaste.set(0);
+  cylinder_crimptaste.set(0);
+  cylinder_auswerfer.set(0);
+}
+
+void reset_hydraulics() {
+  hydraulic_timeout.reset_time();
+  cylinder_hydr_power_supply.set(1);
+  cylinder_hydr_pressure_valve.set(1);
   cylinder_hydr_vorklemme.set(0);
   cylinder_hydr_nachklemme.set(0);
   cylinder_hydr_vorschubklemme.set(0);
-  cylinder_crimptaste.set(0);
-  cylinder_auswerfer.set(0);
-  foerderzylinder_zurueck();
-  if (!emergency_stop_signal.get_raw_button_state()) {
-    cylinder_main_hydraulik_pressure.set(1);
-    cylinder_main_hauptluft.set(1);
-  }
+  delay(1000); // time for Hydraulic cylinders to move back
+}
+
+void reset_machine_states() {
+  state_controller.set_machine_stop();
+  state_controller.set_error_mode(false);
+  reset_flag_of_current_step();
+  state_controller.set_current_step_to(0);
+  reset_flag_of_current_step();
   clear_text_field("t4");
   hide_info_field();
-  cylinder_wippenhebel.set(1);
-  delay(500);
-  cylinder_wippenhebel.set(0);
+}
+
+void reset_electrocylinder() { //
+  foerderzylinder_zurueck();
+}
+
+void reset_machine() {
+  if (!emergency_stop_signal.get_raw_button_state()) {
+    cylinder_hydr_pressure_valve.set(1);
+    cylinder_main_hauptluft.set(1);
+  }
+  reset_machine_states();
+  reset_pneumatics();
+  // power_on_electrocylinder();
+  // diasbled because it has an 8s delay
+  reset_electrocylinder();
+  reset_hydraulics();
 }
 
 long measure_runtime() {
@@ -980,24 +1007,50 @@ class Vorklemme_zu : public Cycle_step {
 };
 
 // MESSER AB
-class Messer_ab : public Cycle_step {
-  String get_display_text() { return "MESSER AB"; }
+
+class Schneiden : public Cycle_step {
+  String get_display_text() { return "SCHNEIDEN"; }
+  int cut_retries = 0;
 
   void do_initial_stuff() {
+    cut_retries = 0;
     vent_sledge();
     cycle_step_delay.set_unstarted();
   }
+
+  void try_cutting_twice() {
+    cylinder_messer.stroke(1000, 500);
+
+    // If sensor does not switch high during the set stroke time,
+    // knife did not cut through and a second stroke will be started.
+    if (cylinder_messer.stroke_completed()) {
+      cut_retries++;
+      cylinder_messer.set(0);
+      delay (500);
+    }
+
+    if (cut_retries == 3) {
+      strap_count_for_knife = 0;
+      cylinder_messer.abort_stroke();
+      set_loop_completed();
+      error_stop_machine("ERROR MESSER");
+    }
+
+    if (sensor_messerzylinder.switched_high()) {
+      strap_count_for_knife = 0;
+      cylinder_messer.abort_stroke();
+      cylinder_messer.set(0);
+      delay(500);
+      set_loop_completed();
+    }
+  }
   void do_loop_stuff() {
 
-    if (cut_count == 4) {
-      cylinder_messer.set(1);
-      if (cycle_step_delay.delay_time_is_up(600)) {
-        cut_count = 0;
-        set_loop_completed();
-      }
+    if (strap_count_for_knife == 4) {
+      try_cutting_twice();
     } else {
       if (cycle_step_delay.delay_time_is_up(600)) {
-        cut_count++;
+        strap_count_for_knife++;
         set_loop_completed();
       }
     }
@@ -1041,28 +1094,28 @@ class Foerderzylinder_zurueck : public Cycle_step {
 class Auswerfer_zurueck : public Cycle_step {
   String get_display_text() { return "AUSWERFER ZURUECK"; }
 
-  void do_initial_stuff() {}
+  void do_initial_stuff() { vent_sledge(); }
   void do_loop_stuff() {
     cylinder_auswerfer.set(0);
     set_loop_completed();
   }
 };
 
-// MESSER AUF
-class Messer_auf : public Cycle_step {
-  String get_display_text() { return "MESSER AUF"; }
+// // MESSER AUF
+// class Messer_auf : public Cycle_step {
+//   String get_display_text() { return "MESSER AUF"; }
 
-  void do_initial_stuff() {
-    vent_sledge();
-    cycle_step_delay.set_unstarted();
-  }
-  void do_loop_stuff() {
-    cylinder_messer.set(0);
-    if (cycle_step_delay.delay_time_is_up(500)) {
-      set_loop_completed();
-    }
-  }
-};
+//   void do_initial_stuff() {
+//     vent_sledge();
+//     cycle_step_delay.set_unstarted();
+//   }
+//   void do_loop_stuff() {
+//     cylinder_messer.set(0);
+//     if (cycle_step_delay.delay_time_is_up(500)) {
+//       set_loop_completed();
+//     }
+//   }
+// };
 
 // WIPPENHEBEL SCHLIESSEN
 class Tool_wippe_zu : public Cycle_step {
@@ -1255,6 +1308,24 @@ void power_off_electrocylinder() {
   digitalWrite(FOERDERZYLINDER_LOGIC_POWER_RELAY, LOW);
 }
 
+void stop_machine(String error_message) {
+  state_controller.set_machine_stop();
+  state_controller.set_step_mode();
+  reset_machine();
+  cylinder_hydr_pressure_valve.set(0);
+  stroke_wippenhebel();
+  cylinder_main_hauptluft.set(0);
+  power_off_electrocylinder();
+  show_info_field();
+  display_text_in_info_field(error_message);
+}
+
+void error_stop_machine(String error_message) {
+  stop_machine(error_message);
+  send_email_machine_stopped();
+  state_controller.set_error_mode(true);
+}
+
 void monitor_emergency_signal() {
 
   static bool emergency_stop_active = false;
@@ -1263,28 +1334,21 @@ void monitor_emergency_signal() {
   if (emergency_stop_signal.switched_low()) {
     emergency_stop_active = false;
     power_on_electrocylinder();
-    cylinder_main_hydraulik_pressure.set(1);
+    hydraulic_timeout.reset_time();
+    cylinder_hydr_pressure_valve.set(1);
     cylinder_main_hauptluft.set(1);
   }
 
   // STOP SYSTEM (LOOP RUNS ONLY ONCE)
   if (emergency_stop_signal.switched_high()) {
     emergency_stop_active = true;
-    cylinder_main_hauptluft.set(0);
-    state_controller.set_machine_stop();
-    state_controller.set_step_mode();
-    reset_machine();
-    show_info_field();
-    display_text_in_info_field("NOT AUS AKTIV");
-    power_off_electrocylinder();
-    delay(1500); // wait for hydraulic cylinders to move back
-    cylinder_main_hydraulik_pressure.set(0);
+    stop_machine("NOT AUS AKTIV");
   }
 
   // KEEP SYSTEM STOPPED (LOOP KEEPS RUNNING)
   if (emergency_stop_active) {
     state_controller.set_machine_stop();
-    cylinder_main_hydraulik_pressure.set(0);
+    cylinder_hydr_pressure_valve.set(0);
     cylinder_main_hauptluft.set(0);
   }
 }
@@ -1293,13 +1357,7 @@ void monitor_error_timeouts() {
 
   // TIMEOUT IF NO LOWER STRAP DETECTED:
   if (bandsensor_timeout.has_timed_out()) {
-    state_controller.set_machine_stop();
-    state_controller.set_error_mode(true);
-    cylinder_main_hydraulik_pressure.set(0);
-    cylinder_main_hauptluft.set(0);
-    send_email_machine_stopped();
-    show_info_field();
-    display_text_in_info_field("KEIN BAND");
+    error_stop_machine("KEIN BAND");
   }
 
   // TIMEOUT IF STUCK IN A CYCLE:
@@ -1332,26 +1390,14 @@ void monitor_error_timeouts() {
 
     else if (reset_count == 2) {
       // Stop and show error:
-      state_controller.set_machine_stop();
-      state_controller.set_error_mode(true);
-      cylinder_main_hydraulik_pressure.set(0);
-      cylinder_main_hauptluft.set(0);
-      send_email_machine_stopped();
-      show_info_field();
-      display_text_in_info_field("TIMEOUT ERROR");
+      error_stop_machine("TIMEOUT ERROR");
     }
   }
 }
 
 void monitor_temperature_error() {
   if (get_temperature() > counter.get_value(max_temperature)) {
-    state_controller.set_machine_stop();
-    state_controller.set_error_mode(true);
-    cylinder_main_hydraulik_pressure.set(0);
-    cylinder_main_hauptluft.set(0);
-    send_email_machine_stopped();
-    show_info_field();
-    display_text_in_info_field("TEMPERATURE ERROR");
+    error_stop_machine("TEMPERATURE ERROR");
   }
 }
 
@@ -1377,11 +1423,11 @@ void setup() {
   main_cycle_steps.push_back(new Foerderklemme_zu);
   main_cycle_steps.push_back(new Foerdern);
   main_cycle_steps.push_back(new Vorklemme_zu);
-  main_cycle_steps.push_back(new Messer_ab);
+  main_cycle_steps.push_back(new Schneiden);
   main_cycle_steps.push_back(new Foerdereinheit_auf);
   main_cycle_steps.push_back(new Foerderzylinder_zurueck);
   main_cycle_steps.push_back(new Auswerfer_zurueck);
-  main_cycle_steps.push_back(new Messer_auf);
+  // main_cycle_steps.push_back(new Messer_auf);
   main_cycle_steps.push_back(new Tool_wippe_zu);
   main_cycle_steps.push_back(new Foerderklemme_zu);
   main_cycle_steps.push_back(new Aktiv_spannen);
@@ -1412,10 +1458,10 @@ void setup() {
 
   if (!emergency_stop_signal.get_raw_button_state()) { // emergency stop not activated
     power_on_electrocylinder();
-    cylinder_main_hydraulik_pressure.set(1);
+    cylinder_hydr_pressure_valve.set(1);
     cylinder_main_hauptluft.set(1);
   }
-  cylinder_hydraulic_voltage.set(1);
+  cylinder_hydr_power_supply.set(1);
   hydraulic_timeout.reset_time();
   Serial.println("EXIT SETUP");
 }
@@ -1488,6 +1534,7 @@ void loop() {
   // RUN RESET IF RESET IS ACTIVATED:
   if (state_controller.reset_mode_is_active()) {
     reset_machine();
+    stroke_wippenhebel();
     state_controller.set_reset_mode(0);
 
     if (state_controller.run_after_reset_is_active()) {
@@ -1499,7 +1546,7 @@ void loop() {
   }
 
   // CHECK IF STRAP AVAILABLE:
-  if (bandsensor_unten.get_raw_button_state() && bandsensor_oben.get_raw_button_state()) {
+  if (bandsensor_zufuhr_unten.get_raw_button_state() && bandsensor_zufuhr_oben.get_raw_button_state()) {
     bandsensor_timeout.reset_time();
   }
 
@@ -1511,12 +1558,12 @@ void loop() {
   }
   // POWER OFF HYDRAULIC AFTER A WHILE OF INACTIVITY
   if (hydraulic_timeout.has_timed_out()) {
-    cylinder_hydraulic_voltage.set(0);
+    cylinder_hydr_power_supply.set(0);
   }
 
   // POWER OFF HYDRAULIC IF HYDRAULIC SAFETY SENSOR IS LOW
   if (!hydraulic_safety_sensor_1.get_raw_button_state() || !hydraulic_safety_sensor_2.get_raw_button_state()) {
-    cylinder_hydraulic_voltage.set(0);
+    cylinder_hydr_power_supply.set(0);
   }
 }
 
