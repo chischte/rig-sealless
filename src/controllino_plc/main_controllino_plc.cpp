@@ -309,8 +309,10 @@ void reset_machine() {
   }
   reset_machine_states();
   reset_pneumatics();
-  // power_on_electrocylinder();
-  // diasbled because it has an 8s delay
+  if (!digitalRead(FOERDERZYLINDER_LOGIC_POWER_RELAY)) {
+    // Logic has been powerded off
+    power_on_electrocylinder(); // 8s delay
+  }
   reset_electrocylinder();
   reset_hydraulics();
 }
@@ -1026,7 +1028,7 @@ class Schneiden : public Cycle_step {
     if (cylinder_messer.stroke_completed()) {
       cut_retries++;
       cylinder_messer.set(0);
-      delay (500);
+      delay(500);
     }
 
     if (cut_retries == 3) {
@@ -1046,7 +1048,7 @@ class Schneiden : public Cycle_step {
   }
   void do_loop_stuff() {
 
-    if (strap_count_for_knife == 4) {
+    if (strap_count_for_knife == 3) {
       try_cutting_twice();
     } else {
       if (cycle_step_delay.delay_time_is_up(600)) {
