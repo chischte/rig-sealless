@@ -896,14 +896,10 @@ class Luft_ablassen : public Cycle_step {
     }
 
     if (pressure_low) {
-      if (cycle_step_delay.delay_time_is_up(10)) {
+      if (cycle_step_delay.delay_time_is_up(200)) {
         set_loop_completed();
       }
     }
-
-    // if (cycle_step_delay.delay_time_is_up(1500)) {
-    //   set_loop_completed();
-    // }
   }
 };
 
@@ -944,7 +940,7 @@ class Nachklemme_auf : public Cycle_step {
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    if (cycle_step_delay.delay_time_is_up(10)) {
+    if (cycle_step_delay.delay_time_is_up(200)) {
       set_loop_completed();
     }
   }
@@ -970,7 +966,7 @@ class Foerderklemme_zu : public Cycle_step {
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    if (cycle_step_delay.delay_time_is_up(600)) {
+    if (cycle_step_delay.delay_time_is_up(800)) {
       set_loop_completed();
     }
   }
@@ -1002,7 +998,7 @@ class Vorklemme_zu : public Cycle_step {
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    if (cycle_step_delay.delay_time_is_up(10)) {
+    if (cycle_step_delay.delay_time_is_up(200)) {
       set_loop_completed();
     }
   }
@@ -1086,7 +1082,7 @@ class Foerderzylinder_zurueck : public Cycle_step {
     // if (sensor_foerderzylinder_out.switched_high()) {
     //   set_loop_completed();
     // }
-    if (cycle_step_delay.delay_time_is_up(10)) {
+    if (cycle_step_delay.delay_time_is_up(50)) {
       set_loop_completed();
     }
   }
@@ -1189,7 +1185,7 @@ class Nachklemme_zu : public Cycle_step {
     cycle_step_delay.set_unstarted();
   }
   void do_loop_stuff() {
-    if (cycle_step_delay.delay_time_is_up(10)) {
+    if (cycle_step_delay.delay_time_is_up(400)) {
       set_loop_completed();
     }
   }
