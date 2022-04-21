@@ -83,7 +83,7 @@ Debounce sensor_foerderzylinder_out(CONTROLLINO_A6); // GREEN
 Debounce emergency_stop_signal(CONTROLLINO_A10); //
 Debounce bandsensor_zufuhr_oben(CONTROLLINO_A0); //
 Debounce bandsensor_zufuhr_unten(CONTROLLINO_A1); //
-// Debounce bandsensor_messerplatte(CONTROLLINO_A8);
+Debounce bandbogensensor(CONTROLLINO_A8);
 Debounce sensor_messerzylinder(CONTROLLINO_A9);
 Debounce hydraulic_safety_sensor_1(CONTROLLINO_A11); //
 Debounce hydraulic_safety_sensor_2(CONTROLLINO_A12); //
@@ -116,7 +116,8 @@ Insomnia erase_force_value_timeout(5000);
 Insomnia log_force_value_timeout(1000);
 Insomnia machine_stopped_error_timeout(7000); // electrocylinder takes up to 20" to find start position
 Insomnia hydraulic_timeout(120000); // hydraulic main power shuts down if timed out
-Insomnia bandsensor_timeout(1500);
+Insomnia bandsensor_timeout(5000);
+Insomnia bandbogen_timeout(1500);
 Insomnia pressure_update_delay;
 Insomnia temperature_update_delay;
 Insomnia cycle_step_delay;
@@ -527,6 +528,7 @@ void switch_play_pause_push(void *ptr) {
   nex_state_machine_running = !nex_state_machine_running;
   machine_stopped_error_timeout.reset_time();
   bandsensor_timeout.reset_time();
+  bandbogen_timeout.reset_time();
 }
 
 void switch_step_auto_mode_push(void *ptr) {
@@ -1353,18 +1355,24 @@ void monitor_emergency_signal() {
 
 void monitor_error_timeouts() {
 
-  // TIMEOUT IF NO LOWER STRAP DETECTED:
+    // TIMEOUT IF NO LOWER STRAP DETECTED:
   if (bandsensor_timeout.has_timed_out()) {
     error_stop_machine("KEIN BAND");
   }
 
+  // TIMEOUT IF STRAP IS BENT INTO A CURVE:
+  else if (bandbogen_timeout.has_timed_out()) {
+    error_stop_machine("BAND GEBOGEN");
+  }
+
   // TIMEOUT IF STUCK IN A CYCLE:
-  if (machine_stopped_error_timeout.has_timed_out()) {
+  else if (machine_stopped_error_timeout.has_timed_out()) {
     show_info_field();
     display_text_in_info_field("STOPPED ...");
     delay(2000);
     machine_stopped_error_timeout.reset_time();
     bandsensor_timeout.reset_time();
+    bandbogen_timeout.reset_time();
 
     if (reset_count == 0) {
       // Reset and restart:
@@ -1391,6 +1399,8 @@ void monitor_error_timeouts() {
       error_stop_machine("TIMEOUT ERROR");
     }
   }
+
+
 }
 
 void monitor_temperature_error() {
@@ -1513,6 +1523,7 @@ void loop() {
   if (!state_controller.machine_is_running()) {
     machine_stopped_error_timeout.reset_time();
     bandsensor_timeout.reset_time();
+    bandbogen_timeout.reset_time();
   }
 
   // MONITOR ERRORS ONLY WHEN RIG IS RUNNING IN AUTO MODE:
@@ -1546,6 +1557,11 @@ void loop() {
   // CHECK IF STRAP AVAILABLE:
   if (bandsensor_zufuhr_unten.get_raw_button_state() && bandsensor_zufuhr_oben.get_raw_button_state()) {
     bandsensor_timeout.reset_time();
+  }
+
+  // CHECK IF STRAP IS NOT BENT INTO A CURVE:
+  if (bandbogensensor.get_raw_button_state()) {
+    bandbogen_timeout.reset_time();
   }
 
   // DISPLAY DEBUG INFOMATION:
