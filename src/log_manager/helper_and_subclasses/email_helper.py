@@ -8,7 +8,7 @@ from datetime import datetime
 class email_helper():
 
     def __init__(self):
-        self.sender = 'dauertest.bst@gmail.com'
+        self.sender = 'sealless.monitor@gmx.ch'
         # 'm.neeser@signode.com'
         # 'b.hubschmid@signode.com'
         # 'a.keller@signode.com'
@@ -21,8 +21,8 @@ class email_helper():
         msg['From'] = self.sender
         msg['To'] = ','.join(self.receivers)
         try:
-            s = smtplib.SMTP_SSL(host='smtp.gmail.com', port=465)
-            s.login(user='dauertest.bst', password=email_password)
+            s = smtplib.SMTP_SSL(host='mail.gmx.net', port=465)
+            s.login(user='sealless.monitor@gmx.ch', password=email_password)
             s.sendmail(self.sender, self.receivers, msg.as_string())
             s.quit()
         except Exception as error:
