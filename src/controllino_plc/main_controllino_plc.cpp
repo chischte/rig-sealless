@@ -1084,7 +1084,7 @@ class Foerderzylinder_zurueck : public Cycle_step {
     // if (sensor_foerderzylinder_out.switched_high()) {
     //   set_loop_completed();
     // }
-    if (cycle_step_delay.delay_time_is_up(50)) {
+    if (cycle_step_delay.delay_time_is_up(500)) {
       set_loop_completed();
     }
   }
